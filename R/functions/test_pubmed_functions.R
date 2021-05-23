@@ -1,0 +1,131 @@
+#'
+#' Script name: test_pubmed_functions.R
+#'
+#' Purpose of script:
+#'
+#' Author:Fred Criscuolo
+#'
+#' Date Created: 2021-05-09
+#'
+#' Copyright (c) Fred Criscuolo, 2021
+#' Email: genomicdatasci@gmail.com
+#'
+#' ---------------------------
+#'
+#' Notes:
+#'   
+#'
+#' ---------------------------
+
+
+#' Load helper function
+ source(here::here("scripts/functions/pubmed.functions.R"))
+test_pubmed_functions("18725932")
+test_all_pubmed_functions <- function(pubmed_id) {
+  doc <- fetch_pubmed_xml_doc(pubmed_id,props$save.pubmed.xml.default)
+  print(paste("PubMed id:", pubmed_id, sep = " "))
+  print(paste("DOI: ", resolve_article_doi(doc)))
+  title <- resolve_pubmed_article_title(doc)
+  print(paste("title:",title, sep = " "))
+  journal <- resolve_pubmed_article_journal(doc)
+  print("Journal: ")
+  print(resolve_pubmed_article_journal(doc))
+  print("Journal Issue:")
+  print(resolve_article_journal_issue(doc))
+  abstract <- resolve_pubmed_abstract(doc)
+  print("Abstract(s):")
+  abstract %>% 
+    print(.)
+  # test resolving mesh headings
+  print("Mesh Headings:")
+  resolve_mesh_headings(doc) %>%
+    print(.)
+  #Authors
+  print("Authors:")
+  resolve_pubmed_authors(doc) %>% 
+    print(.)
+  #Referencestest
+  print("References:")
+  refs <-  resolve_pubmed_references(doc)
+  print(refs)
+  # test retrieving pubmed entries for referenced articles
+  # only the first four for testing
+  test_refs <-  if (length(refs > 4)) refs[1:4,] else refs
+  test_docs <- test_refs$ArticleIdList %>% 
+    fetch_pubmed_xml_doc(.,FALSE) 
+  test_docs %>% resolve_pubmed_article_title(.)
+}
+
+test_xml_nodes_present <- function(node_name){
+
+  doc <- xmlParse(file = here::here("tmp/18725932.xml"))
+  nodes <- as_tibble(xmlToDataFrame(nodes = getNodeSet(doc,"//Article" ) ))
+  node_names = names(nodes)
+  present <- if(node_name %in% names(nodes)) TRUE else FALSE
+  print(paste("Node: ",node_name," presence = ",present,sep=""))
+  return (present)
+}
+
+test_node_exists <- function(pubmed_id,child_node_name, reference_node_name = "//Article"){
+  doc <- fetch_pubmed_xml_doc(pubmed_id,TRUE)
+  #return (node_exists(doc, child_node_name, reference_node_name))
+  nodes = getNodeSet(doc,reference_node_name)
+  print(nodes)
+  nodes <- as.tibble(xmlToDataFrame(nodes = getNodeSet(doc,reference_node_name ) ))
+  print(names(nodes))
+  present <- if(child_node_name %in% names(nodes)) TRUE else FALSE
+  #print(paste("Node: ",node_name," present = ",present,sep=""))
+  return (present)
+}
+
+test_pubmed_authors <- function(){
+  #doc <- xmlParse(file = here::here("tmp/20205784.xml"))
+  pm_id <- '20205784'
+  name_tibble <- tibble(LastName = character(),
+                        ForeName = character(),
+                        Initials = character()) 
+  doc <- fetch_pubmed_xml_doc(pubmed_id,TRUE)
+  nodes <- getNodeSet(doc,"//Author")
+  for (i in 1: length(nodes)) {
+    children <- xmlChildren(nodes[[i]])
+    LastName  <-  xmlValue(children$LastName)
+    ForeName <- xmlValue(children$ForeName)
+    Initials <-  xmlValue(children$Initals)
+    name_tibble[nrow(name_tibble) + 1,] <- list(LastName, ForeName, Initials)
+  } 
+  authors <- name_tibble %>% 
+    mutate(id = digest2int(paste(LastName, ForeName, Initials,sep=""),0L)) %>% 
+    mutate(pubmed_id = pm_id)
+  print(authors)
+  return (authors)
+}
+
+process_author_node <- function(node, df) {
+  children <- xmlChildren(node[[1]])
+  lname  <-  xmlValue(children$LastName)
+  fname <- xmlValue(children$ForeName)
+  init <-  xmlValue(children$Initals)
+  df[nrow(df)+1,] <- list(lname, fname, init)
+  print(df)
+  return (df)
+}
+
+test_pubmed_authors_tidy <- function(pubmed_id = "20205784"){
+  authors <- tibble(LastName = character(),
+                        ForeName = character(),
+                        Initials = character()) 
+  doc <- fetch_pubmed_xml_doc(pubmed_id,TRUE)
+  nodes <- getNodeSet(doc,"//Author")
+   nodes %>% 
+    process_author_node(.,authors) %>% 
+    #add_row(authors,.$lname, .$fname, .$init) %>% 
+     mutate(id = digest2int(paste(LastName, ForeName, Initials,sep=""),0L)) %>% 
+     mutate(pubmed_id = pm_id)
+   print(authors)
+   return (authors)
+   
+}
+
+test_all_pubmed_functions("18725932")
+n <- doc["//Pagination"]
+

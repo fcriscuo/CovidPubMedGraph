@@ -5,6 +5,12 @@
 # Session Data files
 .RData
 
+#Protected Data
+protected_data/
+
+#Temporary files
+tmp/
+
 # User-specific files
 .Ruserdata
 
