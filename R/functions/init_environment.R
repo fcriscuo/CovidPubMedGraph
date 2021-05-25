@@ -22,7 +22,7 @@ cite_packages(out.format = "md", out.dir = here::here("markdown"))  # Generate m
 print("Required Bioconductor and Rstats packages loaded")
 
 source(here::here("R/functions/xml_utilities.R"))
-source(here::here("R/functions/pubmed.functions.R"))
+source(here::here("R/functions/pubmed_functions.R"))
 source(here::here("R/functions/neo4j_functions.R"))
 
 print ("Application environment initialized......")

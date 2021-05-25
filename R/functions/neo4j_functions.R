@@ -62,6 +62,10 @@ merge_pubmed_author <- function(author) {
   return (as.integer(res$author.id))
 }
 
+#
+
+# Citations ---------------------------------------------------------------
+
 
 #'  Article Citations
 #'  Merge the Citation node into the database
@@ -92,25 +96,46 @@ merge_citation <- function(citation){
   print(class(citation))
 }
 
+find_citations_by_pubmed_id <- function(pubmed_id) {
+  query <-"MATCH (p:PubMed{pubmed_id:'PUBMED_ID'})-[:HAS_CITATION]->(c) RETURN p,c"
+  query <- str_replace(query,"PUBMED_ID",pubmed_id)
+  res <- execute_cypher_command(query)
+  return(res$c)
+}
+
+load_citation_pubmed_rel <- function(citation_id, ref_pubmed_id){
+  query <-  paste("MATCH (c:Citation{id: CITATION}), (p:PubMed{pubmed_id:'PUBMED_ID'}) ",
+                " CREATE (c) - [r:HAS_PUBMED_REF] -> (p) RETURN r", sep="")
+  query <- str_replace(query, "CITATION", as.character(citation_id))
+  query <- str_replace(query,"PUBMED_ID", ref_pubmed_id)
+  #print(paste("Citation ->PubMed rel: ", query, spe=""))
+  return( execute_cypher_command(query))
+}
+
+# Authors -----------------------------------------------------------------
+
+
 #' Load all authors for this document into the database
 #' Merge author nodes
 #' Establish a relationship between the Author nodes and the parent PubMed node
 load_authors <- function(authors){
   #result <- vector(mode = "character", length = length(authors))
  for (i in 1: length(authors)){
-   
    pubmed_id <- authors$pubmed_id[i]
    if (!is.na(pubmed_id)) {
    #pubmed <-  match_pubmed_by_id(pubmed_id)
    author_id <- merge_pubmed_author(authors[i,])
    query <- paste("MATCH (p:PubMed), (a:Author) WHERE p.pubmed_id = '", pubmed_id,"' AND a.id = ",author_id, 
           " CREATE (p) -[r:HAS_AUTHOR] ->(a) RETURN r",sep="")
-   print(query)
+   #print(query)
    #result[i] <- execute_cypher_command(query)
    }
  }
     return ()
 }
+
+# Authors -----------------------------------------------------------------
+
 
 #' Function to determine if a PubMed node exists
 #' Avoids unnecessary MERGE statements
@@ -157,22 +182,7 @@ merge_article_ids <- function(article_ids){
   return (results)
 }
 
-#' Function to create Neo4j database constraints
 
-define_database_constraints <- function() {
-  constraint <- 'CREATE CONSTRAINT unique_pubmed IF NOT EXISTS ON (n:PubMed) ASSERT n.pubmed_is IS UNIQUE'  
-  execute_cypher_command(constraint)
-  constraint <- 'create constraint unique_mesh_descriptor if not exists on (m:MeshHeading) assert m.descriptor_key is unique;'
-  execute_cypher_command(constraint)
-  constraint <- 'create constraint unique_citation if not exists on (c:Citation) assert c.citation is unique;'
-  execute_cypher_command(constraint)
-  constraint <- 'create constraint unique_mesh_descriptor if not exists on (m:MeshHeading) assert m.descriptor_key is unique;'
-  execute_cypher_command(constraint)
-  constraint <- 'create constraint unique_journal_issn if not exists on (j:Journal) assert j.journal_issn is unique'
-  execute_cypher_command(constraint)
-  constraint <- 'create constraint unique_issue_key if not exists on (j:JournalIssue) assert j.issue_key is unique'
-  execute_cypher_command(constraint)
-}
 
 
 #' Mesh Heading functions
@@ -291,7 +301,7 @@ load_pubmed_node <- function(pubmed_properties){
   
 }
 
-find_pubmed_nodes_by_level <- function(level){
+find_pubmed_ids_by_level <- function(level){
   match <- paste("MATCH (p:PubMed {level: ",level, "} ) return p.pubmed_id")
   res <-  (execute_cypher_command(match))
   return (as.list(res$p.pubmed_id))

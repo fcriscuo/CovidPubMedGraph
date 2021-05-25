@@ -6,7 +6,7 @@
 #' loaded into a local Neo4j database instance. In addition, other PubMed entries specified as refernece will
 #' also be fetched and loaded. This latter process will be performed recursively until a specified
 #' number of reference levels has been reached
-#' 
+#'
 #' Author:Fred Criscuolo
 #'
 #' Date Created: 2021-05-20
@@ -20,18 +20,42 @@
 #'    TODO: refactor code to use the easyPubMed package in lieu of the rentrez package
 #'
 #' ---------------------------
-source(here::here("R/functions/init_environment.R"))    
-source(here::here("R/fetch_pubmed_entries.R")) 
+source(here::here("R/functions/init_environment.R"))
+source(here::here("R/fetch_pubmed_entries.R"))
 
 default_csv_file_path <- here::here("protected_data/metadata_sample.csv")
-default_row_count <- 1000
+default_row_count <- 100
+max_ref_level <- props$reference.levels.default
 
 pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
 
 # load neo4j database with level 1 (i.e. covid) pubmed entries
-for (i in 1:nrow(pubmed_id_list)){
-  pubmed_id <-  pubmed_id_list$pubmed_id[i]
-  level <- 1
-  print(paste("Processing PubMed ID: ",pubmed_id, " at level: ",level, sep=""))
+level <- 1
+for (i in 1:nrow(pubmed_id_list)) {
+  pubmed_id <- pubmed_id_list$pubmed_id[i]
+  print(paste("Processing PubMed ID: ", pubmed_id, " at level: ", level, sep = ""))
   load_pubmed_entry(pubmed_id, level)
+}
+
+for (i in 2:max_ref_level) {
+  # get pubmed ids for previous level
+  prev_level <- i - 1
+  pubmed_id_list <- find_pubmed_ids_by_level(prev_level)
+  print(paste("Processing level: ", i, " Found ", length(pubmed_id_list$value), " PubMed entries at level ",
+    prev_level,
+    sep = ""
+  ))
+  for (j in 1:length(pubmed_id_list$value)) {
+    pubmed_id <- pubmed_id_list$value[j]
+    citations <- find_citations_by_pubmed_id(pubmed_id)
+    if (nrow(citations > 0)) {
+      for (k in 1:nrow(citations)) {
+        ref_pubmed_id <- citations$ref_pubmed_id[k]
+        cit_id <- citations$id[k]
+        load_pubmed_entry(ref_pubmed_id, i)
+        # create a relationship between source pubmed id and referenced pubmed id
+        load_citation_pubmed_rel(cit_id, ref_pubmed_id)
+      }
+    }
+  }
 }

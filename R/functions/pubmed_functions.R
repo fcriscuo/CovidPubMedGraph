@@ -39,7 +39,7 @@ fetch_pubmed_xml_doc <- function(pubmed_id, save_xml = props$save.pubmed.xml.def
 #' Function to extract the basic properties of a PubMed node
 #' This is used to process  PubMed entries that
 #' are fetched from NCBI
-resolve_pubmed_node_properties <- function(doc, level) {
+resolve_pubmed_node_properties <- function(doc,pubmed_id, level) {
   doi <- resolve_article_doi(doc)
   title <- resolve_pubmed_article_title(doc)
   abstract <- resolve_pubmed_abstract(doc)
@@ -98,7 +98,7 @@ fetch_referenced_documents <- function(references) {
 }
 
 #' Function to return a tibble of a PubMed document's references
-#' Mutate the tibble to include the pubMed id of the referencing 
+#' Mutate the tibble to include the pubmed id of the referencing 
 #' article. This facilitates creating Neo4j relationships
 resolve_pubmed_references <- function(doc) {
   pubmed_id <- resolve_pubmed_id(doc)
