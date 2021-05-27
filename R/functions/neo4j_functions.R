@@ -20,12 +20,12 @@
 #' 
 
 neo4j_user  <-  Sys.getenv("NEO4J_USER")
-neo4j_password <- Sys.getenv("NEO4J_PASSWORD")
+neo4j_password <- "fjc92677"
 con <- neo4j_api$new(
   url = "http://localhost:7474",
-  db = "covid.db",
-  user = neo4j_user, 
-  password = neo4j_password
+ #db = "covid.db",
+  user = "neo4j",
+  password = "fjc92677"
 )
 
 #' Generic Neo4j Cypher command execution
@@ -127,8 +127,8 @@ load_authors <- function(authors){
    author_id <- merge_pubmed_author(authors[i,])
    query <- paste("MATCH (p:PubMed), (a:Author) WHERE p.pubmed_id = '", pubmed_id,"' AND a.id = ",author_id, 
           " CREATE (p) -[r:HAS_AUTHOR] ->(a) RETURN r",sep="")
-   #print(query)
-   #result[i] <- execute_cypher_command(query)
+   
+   execute_cypher_command(query)
    }
  }
     return ()
