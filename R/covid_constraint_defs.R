@@ -32,6 +32,8 @@ define_database_constraints <- function() {
   execute_cypher_command(constraint)
   constraint <- 'create constraint unique_author_id if not exists on (a:Author) assert a.id is unique'
   execute_cypher_command(constraint)
+  constraint <- 'create constraint unique_keyword if not exists on (k:Keyword) assert k.keyword is unique'
+  execute_cypher_command(constraint)
   execute_cypher_command('SHOW CONSTRAINTS')
   
 }

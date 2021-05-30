@@ -181,6 +181,22 @@ resolve_article_id_list <- function(doc) {
 }
 
 
+# Keywords ----------------------------------------------------------------
+
+resolve_pubmed_keywords <- function(doc){
+  pubmed_id <- resolve_pubmed_id(doc)
+  df <- tibble("keyword" = character(),
+                "pubmed_id" = character())
+  nodes <- getNodeSet(doc,"//Keyword")
+  if (length(nodes) > 0) {
+    for ( i in 1:length(nodes)) {
+      keyword_node <- xmlChildren(nodes[[i]])[[1]]
+      df[nrow(df) + 1,] <- list(xmlValue(keyword_node,pubmed_id))
+    }
+  }
+  return (df)
+}
+
 # Mesh Headings -----------------------------------------------------------
 
 

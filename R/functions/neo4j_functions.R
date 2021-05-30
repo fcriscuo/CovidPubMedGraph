@@ -20,12 +20,12 @@
 #' 
 
 neo4j_user  <-  Sys.getenv("NEO4J_USER")
-neo4j_password <- "fjc92677"
+neo4j_password <- Sys.getenv("NEO4J_PASSWORD")
 con <- neo4j_api$new(
   url = "http://localhost:7474",
- #db = "covid.db",
-  user = "neo4j",
-  password = "fjc92677"
+  db = "neo4j",
+  user = neo4j_user, 
+  password = neo4j_password
 )
 
 #' Generic Neo4j Cypher command execution
@@ -50,22 +50,9 @@ match_pubmed_by_id <- function(pubmed_id) {
   return (pubmed)
 }
 
-#' Author functions
-#' Merge a PubMed Author into the database
-merge_pubmed_author <- function(author) {
-  query <- paste("MERGE (author:Author {lastname:'", author$LastName,
-                 "' , firstname: '", author$ForeName,"', initials:'",
-                author$Initials, "', id:", author$id,"}) return author.id", sep="" )
- # print(query)
-  res <-  execute_cypher_command(query)
-  # print(res)
-  return (as.integer(res$author.id))
-}
 
-#
 
 # Citations ---------------------------------------------------------------
-
 
 #'  Article Citations
 #'  Merge the Citation node into the database
@@ -83,17 +70,13 @@ load_reference_citations <- function(refs) {
      relationship <- paste("MATCH (p:PubMed), (c:Citation) WHERE p.pubmed_id = '",
                            refs$cited_by_pm[i],"' and c.id = ",
                            refs$citation_id[i],
-                           " CREATE (p) -[r:HAS_CITATION]->(c) RETURN r",
+                           " MERGE (p) -[r:HAS_CITATION]->(c) RETURN r",
                            sep=""
                           )
      res <- execute_cypher_command(relationship)
     }
   }
   return ()
-}
-
-merge_citation <- function(citation){
-  print(class(citation))
 }
 
 find_citations_by_pubmed_id <- function(pubmed_id) {
@@ -103,17 +86,37 @@ find_citations_by_pubmed_id <- function(pubmed_id) {
   return(res$c)
 }
 
+#' Create a Relationship between the Citation node and the referenced PubMed node
+#' This establishes a connection between two (2) levels of PubMed entries
+#' Check for an existing relationship
 load_citation_pubmed_rel <- function(citation_id, ref_pubmed_id){
+  # if (as.logical(res[[1]])) {
+  #   warning(paste("HAS_PUBMED_REF relationship between Citationd Id: ", citation_id,
+  #                 " and PubMed Id: ", ref_pubmed_id, " already exixts"))
+  #   return ()
+  # }
   query <-  paste("MATCH (c:Citation{id: CITATION}), (p:PubMed{pubmed_id:'PUBMED_ID'}) ",
-                " CREATE (c) - [r:HAS_PUBMED_REF] -> (p) RETURN r", sep="")
+                " MERGE (c) - [r:HAS_PUBMED_REF] -> (p) ",
+                " ON CREATE SET r.alreadyExisted=FALSE  ",
+                " ON MATCH SET r.alreadyExisted=TRUE  ",
+                " RETURN r.alreadyExisted;", sep ="")
   query <- str_replace(query, "CITATION", as.character(citation_id))
   query <- str_replace(query,"PUBMED_ID", ref_pubmed_id)
-  #print(paste("Citation ->PubMed rel: ", query, spe=""))
-  return( execute_cypher_command(query))
+   return( execute_cypher_command(query))
 }
 
 # Authors -----------------------------------------------------------------
 
+#' Merge a PubMed Author into the database
+merge_pubmed_author <- function(author) {
+  query <- paste("MERGE (author:Author {lastname:'", author$LastName,
+                 "' , firstname: '", author$ForeName,"', initials:'",
+                 author$Initials, "', id:", author$id,"}) return author.id", sep="" )
+  # print(query)
+  res <-  execute_cypher_command(query)
+  # print(res)
+  return (as.integer(res$author.id))
+}
 
 #' Load all authors for this document into the database
 #' Merge author nodes
@@ -123,19 +126,34 @@ load_authors <- function(authors){
  for (i in 1: length(authors)){
    pubmed_id <- authors$pubmed_id[i]
    if (!is.na(pubmed_id)) {
-   #pubmed <-  match_pubmed_by_id(pubmed_id)
    author_id <- merge_pubmed_author(authors[i,])
-   query <- paste("MATCH (p:PubMed), (a:Author) WHERE p.pubmed_id = '", pubmed_id,"' AND a.id = ",author_id, 
-          " CREATE (p) -[r:HAS_AUTHOR] ->(a) RETURN r",sep="")
-   
-   execute_cypher_command(query)
+   merge_rel <- paste("MATCH (p:PubMed), (a:Author) WHERE p.pubmed_id = '", pubmed_id,"' AND a.id = ",author_id, 
+          " MERGE (p) -[r:HAS_AUTHOR] ->(a) RETURN r",sep="")
+   execute_cypher_command(merge_rel)
    }
  }
     return ()
 }
 
-# Authors -----------------------------------------------------------------
+# Keywords -----------------------------------------------------------------
 
+
+#' Merge novel keywords into Neo4j nodes
+#' Merge a relationship between a PubMed node and the keyword node
+load_keywords <- function(keywords, pubmed_id) {
+  for (i in 1:nrow(keywords)){
+    merge_node <- paste("MERGE (k:Keyword {keyword:'",
+                            keywords$keyword[i], "'}) return k")
+    execute_cypher_command(merge_node)
+    #create relationship between pubmed & keyword
+    merge_rel <-  paste ("MATCH (p:PubMed), (k:Keyword)  WHERE ",
+                         " p.pubmed_id = '", pubmed_id,
+                         "' AND k.keyword = '", keywords$keyword[i],
+                         "' MERGE (p) -[r:HAS_KEYWORD]-> (k) RETURN (r)"
+                         ,sep = "")
+    execute_cypher_command(merge_rel)
+  }
+}
 
 #' Function to determine if a PubMed node exists
 #' Avoids unnecessary MERGE statements
@@ -182,9 +200,6 @@ merge_article_ids <- function(article_ids){
   return (results)
 }
 
-
-
-
 #' Mesh Heading functions
 #' Merge a MeshHeading node into the Neo4j database
 merge_mesh_heading <- function(mesh){
@@ -206,7 +221,7 @@ load_mesh_headings <- function(mesh_headings){
     pubmed_id = mesh_headings$pubmed_id[i]
     mesh_key <-  merge_mesh_heading(mesh_headings[i,])
     match <- paste("MATCH (p:PubMed), (m:MeshHeading) WHERE p.pubmed_id = '", pubmed_id,"' AND m.descriptor_key = '",
-                   mesh_key, "' CREATE (p) - [r:HAS_MESH_HEADING] -> (m) RETURN r", sep ="")
+                   mesh_key, "' MERGE (p) - [r:HAS_MESH_HEADING] -> (m) RETURN r", sep ="")
     execute_cypher_command(match)
     result[i] <- mesh_key
     

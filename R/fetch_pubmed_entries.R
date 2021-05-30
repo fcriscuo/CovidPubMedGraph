@@ -23,11 +23,9 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf) {
   # Include col_names = TRUE (default) to document header requirement
   pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, n_max = row_count) %>% 
     select(pubmed_id)
-  print(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
+  log_info(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
   return (pubmed_id_list)
 }
-
-
 
 #' Function to retrieve a PubMed entry identified by its pubmed_id and load its 
 #' properties into the Neo4j databse
@@ -36,7 +34,7 @@ load_pubmed_entry <- function(pubmed_id, level) {
   if (!pubmed_node_exists(pubmed_id)){
     doc <- fetch_pubmed_xml_doc(pubmed_id,FALSE)
     #PubMed node
-    #print(paste("Creating PubMed node: ", pubmed_id, " level ",level, sep=""))
+    log_info(paste("Creating PubMed node: ", pubmed_id, " level ",level, sep=""))
     load_pubmed_node(resolve_pubmed_node_properties(doc,pubmed_id, level))
     #Article IDs
     if (node_count(doc,"//PubmedData/ArticleIdList") > 0) {
@@ -55,12 +53,18 @@ load_pubmed_entry <- function(pubmed_id, level) {
     if( node_count(doc,"//Journal") > 0){
       load_journal_data(resolve_pubmed_article_journal(doc))
     }
+    #Keyword
+    if(node_count(doc,"//KeywordList")> 0) {
+      load_keywords(resolve_pubmed_keywords(doc), pubmed_id)
+    }
     #References
     if(node_count(doc,"//Reference") > 0){
         load_reference_citations(resolve_pubmed_references(doc))
     }
     # confirm that new pubmed entry is in database
-    #print(paste("new PubMed node: ", pubmed_id," loaded = ", pubmed_node_exists(pubmed_id),sep=""))
+    log_info(paste("new PubMed node: ", pubmed_id," loaded = ", pubmed_node_exists(pubmed_id),sep=""))
      
+  } else {
+    log_info("PubMed ID: {pubmed_id} at level: {level} is already loaded")
   }
 }

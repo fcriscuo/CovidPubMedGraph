@@ -66,6 +66,11 @@ test_xml_nodes_present <- function(node_name){
   return (present)
 }
 
+fetch_test_pubmed_xml <- function() {
+  return (xmlParse(file = here::here("./tmp/30296429.xml")))
+}
+
+
 test_node_exists <- function(pubmed_id,child_node_name, reference_node_name = "//Article"){
   doc <- fetch_pubmed_xml_doc(pubmed_id,TRUE)
   #return (node_exists(doc, child_node_name, reference_node_name))
@@ -128,4 +133,24 @@ test_pubmed_authors_tidy <- function(pubmed_id = "20205784"){
 
 test_all_pubmed_functions("18725932")
 n <- doc["//Pagination"]
+
+mock_db_load <- function(content,pubmed_id){
+  content %>% 
+    map(print(paste("pubmed id: ", pubmed_id, " content ",., sep = "")))
+  
+}
+
+
+test_resolve_pubmed_keywords <- function(doc){
+  pubmed_id <- resolve_pubmed_id(doc)
+  l <-  getNodeSet(doc,"//Keyword") %>%
+     map(xmlValue) 
+  return(unlist(l))
+}
+
+
+test_fetch_keywords <- function() {
+  doc <- fetch_test_pubmed_xml()
+  print(test_resolve_pubmed_keywords(doc))
+}
 

@@ -17,7 +17,7 @@
 #'
 #' ---------------------------
 
-if (!require("pacman")) install.packages("pacman"); library(pacman)
+#if (!require("pacman")) install.packages("pacman"); library(pacman)
 
 #' Function that will process a csv file of PebMed entires and return
 #' a tibble of PubMed ids
@@ -48,8 +48,26 @@ fetch_pubmed_xml_doc <- function(pubmed_id, save_xml = props$save.pubmed.xml.def
 }
 
 #' Function that will return a tibble of specified XML nodes from a supplied XML document
+#' Use tryCatch block to catch malformed content
 resolve_xml_node_by_name <- function(doc,node_name) {
-  nodes <- as_tibble(xmlToDataFrame(nodes = getNodeSet(doc,node_name ) ))
+  nodes <- tryCatch(
+    {
+    as_tibble(xmlToDataFrame(nodes = getNodeSet(doc,node_name ) ))
+    },
+    error = function(cond) {
+      pubmed_id <- resolve_pubmed_id(doc)
+      message(paste("ERROR parsing XML for ", node_name, "  PubMed id: ", pubmed_id, sep =""))
+      message(cond)
+      return (NA)
+    },
+    warning = function(cond){
+      pubmed_id <- resolve_pubmed_id(doc)
+      message(paste("Warning parsing XML for ", node_name, "PubMed id: ", pubmed_id, sep =""))
+      message(cond)
+      return (NA)
+    },
+    finally = {}
+    )
   return(nodes)
 }
 

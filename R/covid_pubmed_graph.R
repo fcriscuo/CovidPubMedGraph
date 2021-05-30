@@ -23,8 +23,8 @@
 source(here::here("R/functions/init_environment.R"))
 source(here::here("R/fetch_pubmed_entries.R"))
 
-default_csv_file_path <- here::here("protected_data/metadata_sample.csv")
-default_row_count <- 100
+default_csv_file_path <- here::here("protected_data/metadata_200.csv")
+default_row_count <- 50
 max_ref_level <- props$reference.levels.default
 
 pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
@@ -33,8 +33,9 @@ pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row
 level <- 1
 for (i in 1:nrow(pubmed_id_list)) {
   pubmed_id <- pubmed_id_list$pubmed_id[i]
-  print(paste("Processing PubMed ID: ", pubmed_id, " at level: ", level, sep = ""))
+  log_info(paste("Processing PubMed ID: ", pubmed_id, " at level: ", level, sep = ""))
   load_pubmed_entry(pubmed_id, level)
+  Sys.sleep(0.4)  # limit rate of requests sent to NCBI
 }
 
 for (i in 2:max_ref_level) {
@@ -48,16 +49,16 @@ for (i in 2:max_ref_level) {
   for (j in 1:length(pubmed_id_list$value)) {
     pubmed_id <- pubmed_id_list$value[j]
     citations <- find_citations_by_pubmed_id(pubmed_id)
-    if (nrow(citations > 0)) {
+    if (!is.null(citations) && nrow(citations > 0)) {
       for (k in 1:nrow(citations)) {
         ref_pubmed_id <- citations$ref_pubmed_id[k]
         cit_id <- citations$id[k]
         load_pubmed_entry(ref_pubmed_id, i)
         # create a relationship between source pubmed id and referenced pubmed id
         load_citation_pubmed_rel(cit_id, ref_pubmed_id)
+        Sys.sleep(0.4)  # limit rate of requests sent to NCBI
       }
     }
+    
   }
 }
-
-
