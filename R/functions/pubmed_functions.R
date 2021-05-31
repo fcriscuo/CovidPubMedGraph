@@ -35,6 +35,13 @@ fetch_pubmed_xml_doc <- function(pubmed_id, save_xml = props$save.pubmed.xml.def
   return(doc)
 }
 
+# Cited By ----------------------------------------------------------------
+fetch_novel_cited_by_ids <- function(pubmed_id) {
+  
+}
+# https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&tool=my_tool&email=my_email@example.com
+
+
 # PubMed Properties -------------------------------------------------------
 #' Function to extract the basic properties of a PubMed node
 #' This is used to process  PubMed entries that
@@ -181,6 +188,7 @@ resolve_article_id_list <- function(doc) {
 }
 
 
+
 # Keywords ----------------------------------------------------------------
 
 resolve_pubmed_keywords <- function(doc){
@@ -191,7 +199,8 @@ resolve_pubmed_keywords <- function(doc){
   if (length(nodes) > 0) {
     for ( i in 1:length(nodes)) {
       keyword_node <- xmlChildren(nodes[[i]])[[1]]
-      df[nrow(df) + 1,] <- list(xmlValue(keyword_node,pubmed_id))
+      keyword <- trimws(xmlValue(keyword_node))
+      df[nrow(df) + 1,] <- list(keyword,pubmed_id)
     }
   }
   return (df)

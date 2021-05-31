@@ -154,3 +154,29 @@ test_fetch_keywords <- function() {
   print(test_resolve_pubmed_keywords(doc))
 }
 
+resolve_id <- function(node){
+  link <- xmlChildren(node[[1]]$Id)
+  return (xmlValue(link))
+}
+
+# Test getting cited by data from NCBI ------------------------------------
+test_fetch_cited_by <- function(pubmed_id) {
+  base_url <- "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&&tool=my_tool&email=my_email@example.com"
+  df <- tibble(cite_id = character())
+  url <- stringr::str_replace(base_url, 'PUBMED_ID', pubmed_id)
+  UA <- "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"
+  doc <- GET(url, user_agent(UA))
+  data <- XML::xmlParse(content(doc, "text"))
+  nodes <- getNodeSet(data,'//LinkSetDb')
+  links <- xmlChildren(nodes[[1]])
+  for (i in 1: length(links)){
+    link <- xmlChildren(links[[i]])$Id
+    novel_id <-   xmlValue(link)
+    if (!is.na(novel_id)) {
+     df[nrow(df) +1,] <- novel_id
+    }
+  }
+  return (df)
+}
+
+# 

@@ -19,6 +19,11 @@
 #' ---------------------------
 #' 
 
+
+
+# Neo4j Connection --------------------------------------------------------
+
+
 neo4j_user  <-  Sys.getenv("NEO4J_USER")
 neo4j_password <- Sys.getenv("NEO4J_PASSWORD")
 con <- neo4j_api$new(
@@ -27,6 +32,11 @@ con <- neo4j_api$new(
   user = neo4j_user, 
   password = neo4j_password
 )
+
+
+
+# Utility Functions -------------------------------------------------------
+
 
 #' Generic Neo4j Cypher command execution
 execute_cypher_command <- function(query) {
@@ -50,6 +60,32 @@ match_pubmed_by_id <- function(pubmed_id) {
   return (pubmed)
 }
 
+#' Find the pubmed_id value for all PubMed nodes in the database
+#' Support an optional limit for testing
+
+find_all_pubmed_ids <- function(count = .Machine$integer.max ) {
+  query <- paste("MATCH (p:PubMed) return p.pubmed_id LIMIT ",
+                 as.integer(count),sep ="")
+  res <- execute_cypher_command(query)
+  return (res$p.pubmed_id)
+}
+
+
+find_pubmed_ids_by_level <- function(level){
+  match <- paste("MATCH (p:PubMed {level: ",level, "} ) return p.pubmed_id")
+  res <-  (execute_cypher_command(match))
+  return (as.list(res$p.pubmed_id))
+}
+
+#' Function to determine if a PubMed node exists
+#' Avoids unnecessary MERGE statements
+pubmed_node_exists <- function(pubmed_id) {
+  query <-  paste("OPTIONAL MATCH (p:PubMed{pubmed_id:'", pubmed_id,
+                  "'}) RETURN p IS NOT NULL AS PREDICATE", sep = "")
+  res <-  execute_cypher_command(query)
+  exists <- res$PREDICATE[[1]]
+  return (as.logical(exists))
+}
 
 
 # Citations ---------------------------------------------------------------
@@ -105,6 +141,39 @@ load_citation_pubmed_rel <- function(citation_id, ref_pubmed_id){
    return( execute_cypher_command(query))
 }
 
+
+# CITED_BY Relationship ---------------------------------------------------
+
+#' Create a relationship between a PubMed node and another PubMed node that
+#' cites the first node as a  reference
+#' Update the cited_by_count property in the origin node
+#' 
+ 
+load_cited_by_pubmed_rel <- function(pubmed_id, cited_by_id) {
+  relationship <- paste("MATCH (p:PubMed), (c:PubMed) WHERE p.pubmed_id = 'PUBMED_ID' ",
+                 " AND c.pubmed_id = 'CITED_BY_ID' ",
+                 " MERGE (p) -[r:CITED_BY] -> (c) RETURN r", sep ="")
+  relationship <- str_replace(relationship, "PUBMED_ID", pubmed_id)
+  relationship <- str_replace(relationship, "CITED_BY_ID", cited_by_id)
+  log_info(relationship)
+  execute_cypher_command(relationship)
+# increment cited_by_count property
+update <-  paste("MATCH (p:PubMed {pubmed_id:'PUBMED_ID'}) ",
+                 " SET p.cited_by_count = p.cited_by_count +1 ",
+                 " RETURN p.cited_by_count", sep ="")
+update <-  str_replace(update,"PUBMED_ID", pubmed_id)
+return(execute_cypher_command(update))
+}
+
+#' Reset cited_by_count in specified PubMed node to 0
+#' Useful for repeating cited by scans
+clear_cited_by_count <- function(pubmed_id) {
+  update <- paste("MATCH (p:PubMed{pubmed_id:'PUBMED_ID'}) SET p.cited_by_count = 0")
+  update <- str_replace(update,"PUBMED_ID",pubmed_id)
+  return (execute_cypher_command(update))
+}
+
+
 # Authors -----------------------------------------------------------------
 
 #' Merge a PubMed Author into the database
@@ -155,17 +224,9 @@ load_keywords <- function(keywords, pubmed_id) {
   }
 }
 
-#' Function to determine if a PubMed node exists
-#' Avoids unnecessary MERGE statements
-pubmed_node_exists <- function(pubmed_id) {
-  query <-  paste("OPTIONAL MATCH (p:PubMed{pubmed_id:'", pubmed_id,
-                  "'}) RETURN p IS NOT NULL AS PREDICATE", sep = "")
-  #print(query)
-  res <-  execute_cypher_command(query)
-  exists <- res$PREDICATE[[1]]
-  #print (paste("pubmed id ", pubmed_id, " exists ",exists, " class ", class(exists), sep =""))
-  return (as.logical(exists))
-}
+
+
+# Article ID node ---------------------------------------------------------
 
 #' Function to merge non-pubmed identifiers into the database
 #' Creates/merges an ArticleId node and establishes a relationship between
@@ -200,7 +261,9 @@ merge_article_ids <- function(article_ids){
   return (results)
 }
 
-#' Mesh Heading functions
+
+# Mesh Heading node -------------------------------------------------------
+
 #' Merge a MeshHeading node into the Neo4j database
 merge_mesh_heading <- function(mesh){
   merge <- paste("MERGE (mesh:MeshHeading {descriptor_key:'",
@@ -232,6 +295,11 @@ load_mesh_headings <- function(mesh_headings){
 #' Article Journal and Journal Issue nodes
 #' The Journal and Issue are separated to facilitate identifying the journals
 #' that contain the most papers
+
+
+
+# Journal node functions --------------------------------------------------
+
 
 #' Load journal information for this paper
 #' Create a new JournalIssue node and a relationship to the parent PubMed node
@@ -285,6 +353,9 @@ load_primary_pubmed_nodes_from_csv <- function(filename) {
   execute_cypher_command(set_level)
 }
 
+
+# PubMed node -------------------------------------------------------------
+
 #' Function to MERGE or CREATE a PubMed nodes
 #' PubMed nodes at level 1 also have a Covid label
 load_pubmed_node <- function(pubmed_properties){
@@ -298,6 +369,7 @@ load_pubmed_node <- function(pubmed_properties){
                  "', title:'", pubmed_properties$title[1],
                  "', abstract:'", pubmed_properties$abstract[1],
                  "', level:", level,
+                 ", cited_by_count:0",
                  "}) return pm.pubmed_id", sep=""
                  )
   create <- paste("CREATE (pm:PubMed:Covid {pubmed_id:'",
@@ -316,11 +388,5 @@ load_pubmed_node <- function(pubmed_properties){
   
 }
 
-find_pubmed_ids_by_level <- function(level){
-  match <- paste("MATCH (p:PubMed {level: ",level, "} ) return p.pubmed_id")
-  res <-  (execute_cypher_command(match))
-  return (as.list(res$p.pubmed_id))
-}
 
-'LOAD CSV WITH HEADERS FROM "file:///Users/fcriscuo/RDev/CovidPubMedGraph/protected_data/metadata_sample.csv" AS line CREATE (:PubMed {pubmed_id: line.pubmed_id, title: line.title, doi: line.doi});' %>% 
-  call_neo4j(con)
+

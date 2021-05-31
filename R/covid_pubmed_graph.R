@@ -29,6 +29,9 @@ max_ref_level <- props$reference.levels.default
 
 pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
 
+
+# Reference Level 1 -------------------------------------------------------
+
 # load neo4j database with level 1 (i.e. covid) pubmed entries
 level <- 1
 for (i in 1:nrow(pubmed_id_list)) {
@@ -37,6 +40,9 @@ for (i in 1:nrow(pubmed_id_list)) {
   load_pubmed_entry(pubmed_id, level)
   Sys.sleep(0.4)  # limit rate of requests sent to NCBI
 }
+
+
+# Reference Generations 2-n -----------------------------------------------
 
 for (i in 2:max_ref_level) {
   # get pubmed ids for previous level
@@ -59,6 +65,15 @@ for (i in 2:max_ref_level) {
         Sys.sleep(0.4)  # limit rate of requests sent to NCBI
       }
     }
-    
   }
 }
+
+
+# Cited-by PubMed Nodes ---------------------------------------------------
+
+#' For all the Pubmed nodes in the database, find the PubMed entries that cite those articles
+#' If these new PubMed entries are novel, create a PubMed node for them.
+#' For all cited-by entries, create a realtionship between the cited PubMed node and the cited-by node
+
+
+
