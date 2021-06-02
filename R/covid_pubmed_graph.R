@@ -23,9 +23,12 @@
 source(here::here("R/functions/init_environment.R"))
 source(here::here("R/fetch_pubmed_entries.R"))
 
-default_csv_file_path <- here::here("protected_data/metadata_200.csv")
-default_row_count <- 50
+default_csv_file_path <- here::here("protected_data/metadata_sample.csv")
+default_row_count <- as.integer(props$pubmed.max.count)
 max_ref_level <- props$reference.levels.default
+
+#' Clear the existing database
+clear_neo4j_database()
 
 pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
 
@@ -38,7 +41,7 @@ for (i in 1:nrow(pubmed_id_list)) {
   pubmed_id <- pubmed_id_list$pubmed_id[i]
   log_info(paste("Processing PubMed ID: ", pubmed_id, " at level: ", level, sep = ""))
   load_pubmed_entry(pubmed_id, level)
-  Sys.sleep(0.4)  # limit rate of requests sent to NCBI
+  Sys.sleep(0.3)  # conform to NCBI request frequency
 }
 
 
@@ -74,6 +77,8 @@ for (i in 2:max_ref_level) {
 #' For all the Pubmed nodes in the database, find the PubMed entries that cite those articles
 #' If these new PubMed entries are novel, create a PubMed node for them.
 #' For all cited-by entries, create a realtionship between the cited PubMed node and the cited-by node
+log_info("Loading cited-by articles")
+load_cited_by_articles()
 
 
-
+log_info("******* PubMed article Neo4j loading completed")

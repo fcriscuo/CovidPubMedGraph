@@ -13,7 +13,8 @@ pacman::p_load("tidyverse", "data.table", "rentrez","XML",
 propfile <-  here::here("resources/app_default.properties")
 props <- read.properties(propfile, fields = c("save.pubmed.xml.default",
                                               "reference.levels.default",
-                                              "pubmedid.column.name"))
+                                              "pubmedid.column.name",
+                                              "pubmed.max.count"))
 #' load the 4.x branch of the neo4r package from github
  #remotes::install_github("davidlrosenblum/neo4r",ref="4.x")
 require(neo4r)

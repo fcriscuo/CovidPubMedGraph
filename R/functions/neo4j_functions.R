@@ -37,6 +37,12 @@ con <- neo4j_api$new(
 
 # Utility Functions -------------------------------------------------------
 
+#' clear Neo4j database
+clear_neo4j_database <- function() {
+  delete <- "MATCH (n) DETACH DELETE (n)"
+  execute_cypher_command(delete)
+  log_info("Existing NEO4J database cleared")
+}
 
 #' Generic Neo4j Cypher command execution
 execute_cypher_command <- function(query) {

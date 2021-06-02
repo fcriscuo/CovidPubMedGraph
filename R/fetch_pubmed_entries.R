@@ -18,10 +18,14 @@
 #' ---------------------------
 
 
+
+# PubMed CSV file ---------------------------------------------------------
+
 extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf) {
   # Accept function defaults
   # Include col_names = TRUE (default) to document header requirement
-  pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, n_max = row_count) %>% 
+  pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, guess_max = 4,
+                             n_max = row_count) %>% 
     select(pubmed_id)
   log_info(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
   return (pubmed_id_list)
@@ -32,7 +36,7 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf) {
 
 #' Function to query NCBI for PubMed articles that cite the article 
 #' identified by the specified PubMed id
-#' Returns a tibble of the cited-by aricles
+#' Returns a tibble of the cited-by pubmed ids
 
 fetch_cited_by_pubmed_ids <- function(pubmed_id){
   base_url <- "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&&tool=my_tool&email=my_email@example.com"
@@ -81,6 +85,9 @@ load_cited_by_articles <- function(count =.Machine$integer.max) {
     }
   }
 }
+
+
+# PubMed Entry ------------------------------------------------------------
 
 #' Function to retrieve a PubMed entry identified by its pubmed_id and load its 
 #' properties into the Neo4j databse

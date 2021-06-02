@@ -17,8 +17,6 @@
 #'
 #' ---------------------------
 
-#if (!require("pacman")) install.packages("pacman"); library(pacman)
-
 #' Function that will process a csv file of PebMed entires and return
 #' a tibble of PubMed ids
 #' The csv file is required to a column namsed pubmed_id
@@ -28,7 +26,7 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf) {
   # Include col_names = TRUE (default) to document header requirement
   pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, n_max = row_count) %>% 
     select(pubmed_id)
-  print(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
+  log_info(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
   return (pubmed_id_list)
 }
 
@@ -50,18 +48,17 @@ fetch_pubmed_xml_doc <- function(pubmed_id, save_xml = props$save.pubmed.xml.def
 #' Function that will return a tibble of specified XML nodes from a supplied XML document
 #' Use tryCatch block to catch malformed content
 resolve_xml_node_by_name <- function(doc,node_name) {
+  pubmed_id <- resolve_pubmed_id(doc)
   nodes <- tryCatch(
     {
     as_tibble(xmlToDataFrame(nodes = getNodeSet(doc,node_name ) ))
     },
     error = function(cond) {
-      pubmed_id <- resolve_pubmed_id(doc)
       message(paste("ERROR parsing XML for ", node_name, "  PubMed id: ", pubmed_id, sep =""))
       message(cond)
       return (NA)
     },
     warning = function(cond){
-      pubmed_id <- resolve_pubmed_id(doc)
       message(paste("Warning parsing XML for ", node_name, "PubMed id: ", pubmed_id, sep =""))
       message(cond)
       return (NA)
@@ -79,7 +76,6 @@ node_count <- function(doc, xpath) {
 node_exists <- function(doc,child_node_name, reference_node_name = "//Article"){
   nodes <- as_tibble(xmlToDataFrame(nodes = getNodeSet(doc,reference_node_name ) ))
   present <- if(child_node_name %in% names(nodes)) TRUE else FALSE
-  #print(paste("Node: ",node_name," present = ",present,sep=""))
   return (present)
 }
 
