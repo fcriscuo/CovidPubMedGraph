@@ -19,10 +19,7 @@
 #' ---------------------------
 #' 
 
-
-
 # Neo4j Connection --------------------------------------------------------
-
 
 neo4j_user  <-  Sys.getenv("NEO4J_USER")
 neo4j_password <- Sys.getenv("NEO4J_PASSWORD")
@@ -33,9 +30,19 @@ con <- neo4j_api$new(
   password = neo4j_password
 )
 
-
-
 # Utility Functions -------------------------------------------------------
+
+#' COVID-19 csv file processing
+#' Create new PubMed/Covid nodes for PubMed entries in a csv formatted document
+load_primary_pubmed_nodes_from_csv <- function(filename) {
+  create <-  paste('LOAD CSV WITH HEADERS FROM "file:', filename,
+                   '" AS line CREATE (:PubMed:Covid {pubmed_id: line.pubmed_id, title: line.title, doi: line.doi, abstract: line.abstract});'
+                   ,sep ="") 
+  execute_cypher_command(create)
+  # set the level of these new nodes
+  set_level <- "MATCH (c:Covid) SET c.level = 1 RETURN c.pubmed_id, c.level"
+  execute_cypher_command(set_level)
+}
 
 #' clear Neo4j database
 clear_neo4j_database <- function() {
@@ -76,7 +83,7 @@ find_all_pubmed_ids <- function(count = .Machine$integer.max ) {
   return (res$p.pubmed_id)
 }
 
-
+#' Function to find all the PubMed nodes in the database at a specified level
 find_pubmed_ids_by_level <- function(level){
   match <- paste("MATCH (p:PubMed {level: ",level, "} ) return p.pubmed_id")
   res <-  (execute_cypher_command(match))
@@ -84,7 +91,6 @@ find_pubmed_ids_by_level <- function(level){
 }
 
 #' Function to determine if a PubMed node exists
-#' Avoids unnecessary MERGE statements
 pubmed_node_exists <- function(pubmed_id) {
   query <-  paste("OPTIONAL MATCH (p:PubMed{pubmed_id:'", pubmed_id,
                   "'}) RETURN p IS NOT NULL AS PREDICATE", sep = "")
@@ -92,7 +98,6 @@ pubmed_node_exists <- function(pubmed_id) {
   exists <- res$PREDICATE[[1]]
   return (as.logical(exists))
 }
-
 
 # Citations ---------------------------------------------------------------
 
@@ -210,8 +215,8 @@ load_authors <- function(authors){
     return ()
 }
 
-# Keywords -----------------------------------------------------------------
 
+# Keyword nodes -----------------------------------------------------------
 
 #' Merge novel keywords into Neo4j nodes
 #' Merge a relationship between a PubMed node and the keyword node
@@ -229,7 +234,6 @@ load_keywords <- function(keywords, pubmed_id) {
     execute_cypher_command(merge_rel)
   }
 }
-
 
 
 # Article ID node ---------------------------------------------------------
@@ -255,13 +259,11 @@ merge_article_ids <- function(article_ids){
                     "' AND id.article_id = '", article_id,
                     "' MERGE (p) - [r:HAS_ID{id_type:'", id_type,
                     "'}] -> (id) RETURN r" 
-  
         ,sep="")
      # print(relationship)
       execute_cypher_command(relationship)
       results[i] <- paste("Processed article id: ", article_id,
                           " for pubmed id ", pubmed_id, sep = "")
-      
     }
   }
   return (results)
@@ -303,9 +305,7 @@ load_mesh_headings <- function(mesh_headings){
 #' that contain the most papers
 
 
-
 # Journal node functions --------------------------------------------------
-
 
 #' Load journal information for this paper
 #' Create a new JournalIssue node and a relationship to the parent PubMed node
@@ -343,20 +343,6 @@ load_journal_data <-function(journal) {
                           ,sep = "")
    #print(match)
    execute_cypher_command(relationship_2)
-}
-
-
-
-#' COVID-19 csv file processing
-#' Create new PubMed/Covid nodes for PubMed entries in a csv formatted document
-load_primary_pubmed_nodes_from_csv <- function(filename) {
- create <-  paste('LOAD CSV WITH HEADERS FROM "file:', filename,
-            '" AS line CREATE (:PubMed:Covid {pubmed_id: line.pubmed_id, title: line.title, doi: line.doi, abstract: line.abstract});'
-        ,sep ="") 
-  execute_cypher_command(create)
-  # set the level of these new nodes
-  set_level <- "MATCH (c:Covid) SET c.level = 1 RETURN c.pubmed_id, c.level"
-  execute_cypher_command(set_level)
 }
 
 
