@@ -24,6 +24,8 @@ require(neo4r)
 log_appender(appender_file(here::here("./logs/covid_pubmed.log")))
 log_info("Required Bioconductor and Rstats packages loaded")
 
+#' Environment properties in .Renviron
+source(here::here("R/utilities/renviron_properties.R"))
 source(here::here("R/functions/xml_utilities.R"))
 source(here::here("R/functions/pubmed_functions.R"))
 source(here::here("R/functions/neo4j_functions.R"))
