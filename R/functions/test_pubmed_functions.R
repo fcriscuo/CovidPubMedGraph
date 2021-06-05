@@ -176,14 +176,16 @@ test_fetch_cited_by <- function(pubmed_id) {
   return (df)
 }
 
-update_top_articles <- function(top_articles, pm_id, cited_by_count) {
+test_update_top_articles <- function(top_articles, pm_id, cited_by_count) {
   # identify the current article with the lowest cited by count
   x <- tib[which.min(top_articles$count),]
+  print(x)
   if (x$count[1] < cited_by_count) {
     top_articles <- rows_update(top_articles, tibble(id=x$id[1],pubmed_id=pm_id,
-                                                     count= cited_by_count))
-    print(paste("Top articles id: ", x$id[1], " pubmed id: ",
-                pm_id, " count: ", cited_by_count))
+                                                     count= cited_by_count),
+                                by="id")
+    # print(paste("Top articles id: ", x$id[1], " pubmed id: ",
+    #             pm_id, " count: ", cited_by_count))
   }
   return (top_articles)
 }
@@ -191,7 +193,7 @@ update_top_articles <- function(top_articles, pm_id, cited_by_count) {
 
 # Function to maintain a list of the top n cited PubMed entries
 # input is the number of entries to maintain
-test_top_pubmeds <- function(n=200) {
+test_top_pubmeds <- function(n=500) {
   source(here::here("R/utilities/select_top_cited_articles.R"))
   id <- seq(1:n)
   pubmed_id <- rep("XXXX", times = n)
@@ -205,7 +207,7 @@ test_top_pubmeds <- function(n=200) {
     pubmed_id <-  as.character(pubmed_ids$pubmed_id[i])
     print(paste("Processing pubmed_id: ", pubmed_id, sep=""))
     df <-  fetch_cited_by((pubmed_id))
-    top_articles <- update_top_articles(top_articles, pubmed_id, nrow(df))
+    top_articles <- test_update_top_articles(top_articles, pubmed_id, nrow(df))
     Sys.sleep(0.4)  # limit rate of requests sent to NCBI
   }
   out_file_path <- here::here(paste("data/top_",n,"_articles.csv", sep=""))

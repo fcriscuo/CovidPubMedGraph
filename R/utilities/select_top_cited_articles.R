@@ -40,8 +40,8 @@ httr::set_config(httr::config(http_version = 0))
 log_appender(appender_file(here::here("./logs/top_cited_pubmed.log")))
 
 fetch_cited_by <- function(pubmed_id) {
-  base_url <-
-    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&&tool=my_tool&email=my_email@example.com"
+  base_url <- paste(
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&&tool=my_tool&email=",ncbi_email,"&api_key=",ncbi_api_key,sep = "")
   df <- tibble(cite_id = character())
   url <-
     stringr::str_replace(base_url, 'PUBMED_ID', as.character(pubmed_id))
@@ -91,7 +91,7 @@ top_cited_articles <- function(csv_file = default_csv_file_path, count = default
     pubmed_id <- pubmed_ids$pubmed_id[i]
     cited_by_counts <- nrow(fetch_cited_by(pubmed_id))
     df[nrow(df)+1,] <- list(as.character(pubmed_id), as.integer(cited_by_counts))
-    Sys.sleep(0.4)  # limit rate of requests sent to NCBI
+    Sys.sleep(0.1)  # limit rate of requests sent to NCBI with an API key (10/sec)
   }
   log_info(paste(nrow(df), " PubMed articles have been scanned for being cited"))
   cited_by <- df %>% 
@@ -101,63 +101,6 @@ top_cited_articles <- function(csv_file = default_csv_file_path, count = default
 }
 
 
-
-#' Function to maintain a tibble of the top n cited articles
-update_top_articles <- function(top_articles, pm_id, cited_by_count) {
-  # identify the current article with the lowest cited by count
-  x <- tib[which.min(top_articles$count),]
-  print(paste("id: ", x$id[1], " x$count: ", x$count[1], "   cited_by count:", cited_by_count, sep =""))
-  if (x$count[1] < cited_by_count) {
-    index <- x$id[1]
-    updated_top_articles <- rows_update(top_articles, tibble(id=index,pubmed_id=pm_id,
-                                                     count= cited_by_count),
-                                        by = "id")
-    return (updated_top_articles)
-    # print(paste("Top articles id: ", x$id[1], " pubmed id: ",
-    #             pm_id, " count: ", cited_by_count))
-  }
- 
-  return (top_articles)
-}
-
-
-# Function to maintain a list of the top n cited PubMed entries
-# input is the number of entries to maintain
-select_top_n_cited_articles <-
-  function(csv_file_name = "protected_data/metadata_sample.csv"
-           , n ) {
-    csv_file <- here::here(csv_file_name)
-    snapshot_file <-  here::here("tmp/top_cited_by_snapshot.csv")
-    out_file_path <-
-      here::here(paste("data/top_", n, "_articles.csv", sep = ""))
-    id <- seq(1:n)
-    pubmed_id <- rep("XXXX", times = n)
-    count <-  rep(0, times = n)
-    top_articles <-  tibble(id, pubmed_id, count)
-   
-    # accept default count (i.e. Inf)
-    pubmed_ids <- extract_pubmed_ids_from_csv(csv_file, Inf)
-    for (i in 1:nrow(pubmed_ids)) {
-      # determine the cited by count for this paper
-      pubmed_id <-  as.character(pubmed_ids$pubmed_id[i])
-      df <-  fetch_cited_by((pubmed_id))
-      #print(paste ("Pubmed id: ", pubmed_id, " Count: ", nrow(df)))
-      if (!is.null(nrow(df)) & nrow(df) > 0) {
-        top_articles <-
-          update_top_articles(top_articles, pubmed_id, nrow(df))
-      }
-      # save interim results
-      if (i %% 1000 == 0) {
-        write_csv(top_articles, snapshot_file)
-        print(paste("Snapshot file wirtten at index: ", i, sep = ""))
-      }
-      Sys.sleep(0.4)  # limit rate of requests sent to NCBI
-    }
-   
-    cited_by <- top_articles %>%
-      arrange(desc(count))
-    write_csv(cited_by, out_file_path)
-  }
 
 
 test_top_cited_articles <- function() {
