@@ -63,8 +63,11 @@ test_xml_nodes_present <- function(node_name){
   return (present)
 }
 
-fetch_test_pubmed_xml <- function() {
-  return (xmlParse(file = here::here("./tmp/30296429.xml")))
+test_fetch_pubmed_xml <- function(pubmed_id) {
+  xml_res <- entrez_fetch(db="pubmed", id=pubmed_id, rettype = "xml")
+  doc <- xmlParse(xml_res)
+  title <- resolve_pubmed_article_title(doc)
+  print(paste("title:",title, sep = " "))
 }
 
 
@@ -214,4 +217,10 @@ test_top_pubmeds <- function(n=500) {
   cited_by <- top_articles %>% 
     arrange(desc(count))
   write.csv(cited_by, out_file_path)
+}
+
+test_extract_pubmed_ids_from_csv <- function(){
+  csv_file_path <- here::here("protected_data/metadata_sample.csv")
+  pubmed_id_list <- extract_pubmed_ids_from_csv(csv_file_path)
+  pubmed_id_list
 }

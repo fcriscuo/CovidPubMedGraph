@@ -23,7 +23,7 @@
 source(here::here("R/functions/init_environment.R"))
 source(here::here("R/fetch_pubmed_entries.R"))
 
-default_csv_file_path <- here::here("protected_data/metadata_sample.csv")
+default_csv_file_path <- here::here("./data/top_cited_articles.csv")
 default_row_count <- as.integer(props$pubmed.max.count)
 max_ref_level <- props$reference.levels.default
 
@@ -31,6 +31,7 @@ max_ref_level <- props$reference.levels.default
 clear_neo4j_database()
 
 pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
+
 
 
 # Reference Level 1 -------------------------------------------------------
@@ -51,7 +52,7 @@ for (i in 2:max_ref_level) {
   # get pubmed ids for previous level
   prev_level <- i - 1
   pubmed_id_list <- find_pubmed_ids_by_level(prev_level)
-  print(paste("Processing level: ", i, " Found ", length(pubmed_id_list$value), " PubMed entries at level ",
+  log_info(paste("Processing level: ", i, " Found ", length(pubmed_id_list$value), " PubMed entries at level ",
     prev_level,
     sep = ""
   ))
@@ -65,7 +66,7 @@ for (i in 2:max_ref_level) {
         load_pubmed_entry(ref_pubmed_id, i)
         # create a relationship between source pubmed id and referenced pubmed id
         load_citation_pubmed_rel(cit_id, ref_pubmed_id)
-        Sys.sleep(0.4)  # limit rate of requests sent to NCBI
+        Sys.sleep(0.3)  # limit rate of requests sent to NCBI
       }
     }
   }

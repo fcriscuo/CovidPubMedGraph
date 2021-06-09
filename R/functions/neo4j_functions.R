@@ -87,7 +87,8 @@ find_all_pubmed_ids <- function(count = .Machine$integer.max ) {
 find_pubmed_ids_by_level <- function(level){
   match <- paste("MATCH (p:PubMed {level: ",level, "} ) return p.pubmed_id")
   res <-  (execute_cypher_command(match))
-  return (as.list(res$p.pubmed_id))
+  ids <- res$p.pubmed_id
+ return( as.list(ids))
 }
 
 #' Function to determine if a PubMed node exists
@@ -126,6 +127,8 @@ load_reference_citations <- function(refs) {
   return ()
 }
 
+#' Function to find all the Citation nodes for a specified PubMed Id
+#' Filter for Citations with valid PubMed Ids
 find_citations_by_pubmed_id <- function(pubmed_id) {
   query <-"MATCH (p:PubMed{pubmed_id:'PUBMED_ID'})-[:HAS_CITATION]->(c) RETURN p,c"
   query <- str_replace(query,"PUBMED_ID",pubmed_id)

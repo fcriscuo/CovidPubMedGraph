@@ -88,8 +88,3 @@ write_temp_xml_file <- function(pubmed_xml, pubmed_id) {
   close(fileConn)
 }
 
-test_extract_pubmed_ids_from_csv <- function(){
-  csv_file_path <- here::here("protected_data/metadata_sample.csv")
-  pubmed_id_list <- extract_pubmed_ids_from_csv(csv_file_path)
- pubmed_id_list
-}

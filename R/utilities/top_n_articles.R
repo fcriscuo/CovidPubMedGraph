@@ -67,6 +67,7 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf, skip_row
   pubmed_id_list <- read_csv(csv_file_path,col_names = pubmed_column_names,
                              guess_max = 4,
                              n_max = row_count, skip = skip_rows) %>% 
+    filter(!is.na(pubmed_id)) %>% 
     select(pubmed_id)
   log_info(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
   log_info(paste("Skipped ", skip_rows," rows", sep=""))
@@ -209,9 +210,11 @@ select_top_n_cited_articles <-
           update_top_articles(top_articles, pubmed_id, nrow(df), seq_num)
       }
       # save interim results
-      if (i %% 500 == 0) {
-        write_csv(top_articles, snapshot_file)
-        log_info(paste("Snapshot file wirtten at index: ", i, sep = ""))
+      if (i %% 100 == 0) {
+        top_articles %>% 
+          arrange(desc(count))  %>% 
+        write_csv(., snapshot_file)
+        log_info(paste("Snapshot file wirtten at input row: ", seq_num, sep = ""))
       }
       Sys.sleep(0.1)  # limit rate of requests sent to NCBI
     }
