@@ -1,11 +1,15 @@
 -   base (R Core Team 2021)
 -   data.table (Dowle and Srinivasan 2021)
 -   dplyr (Wickham et al. 2021)
+-   grateful (Rodríguez-Sánchez and Hutchins 2020)
 -   here (Müller 2020)
+-   httr (Wickham 2020)
 -   magrittr (Bache and Wickham 2020)
 -   neo4r (Fay 2021)
 -   pacman (Rinker and Kurkiewicz 2018)
+-   stringr (Wickham 2019)
 -   tidyverse (Wickham et al. 2019)
+-   XML (Temple Lang 2021)
 
 ## References
 
@@ -29,6 +33,19 @@ Computing*. Vienna, Austria: R Foundation for Statistical Computing.
 Rinker, Tyler W., and Dason Kurkiewicz. 2018. *<span
 class="nocase">pacman</span>: Package Management for R*. Buffalo, New
 York. <http://github.com/trinker/pacman>.
+
+Rodríguez-Sánchez, Francisco, and Shaurita D. Hutchins. 2020. *Grateful:
+Facilitate Citation of r Packages*.
+<https://github.com/Pakillo/grateful>.
+
+Temple Lang, Duncan. 2021. *XML: Tools for Parsing and Generating XML
+Within r and s-Plus*. <https://CRAN.R-project.org/package=XML>.
+
+Wickham, Hadley. 2019. *Stringr: Simple, Consistent Wrappers for Common
+String Operations*. <https://CRAN.R-project.org/package=stringr>.
+
+———. 2020. *Httr: Tools for Working with URLs and HTTP*.
+<https://CRAN.R-project.org/package=httr>.
 
 Wickham, Hadley, Mara Averick, Jennifer Bryan, Winston Chang, Lucy
 D’Agostino McGowan, Romain François, Garrett Grolemund, et al. 2019.

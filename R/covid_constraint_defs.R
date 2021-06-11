@@ -1,7 +1,7 @@
 #'
 #' Script name: covid_constraints_defs.R
 #'
-#' Purpose of script:Define neo4j constraints for covid database
+#' Purpose of script:Define constraints for the NEO4J database
 #'
 #' Author:Fred Criscuolo
 #'
@@ -12,11 +12,11 @@
 #'
 #' ---------------------------
 #'
-#' Notes:
+#' Notes: 
+#' 1. This script should be executed prior to loading the Neo4j database.
 #'   
 #'
 #' ---------------------------
-
 #' Function to create Neo4j database constraints
 
 define_database_constraints <- function() {
@@ -35,5 +35,8 @@ define_database_constraints <- function() {
   constraint <- 'create constraint unique_keyword if not exists on (k:Keyword) assert k.keyword is unique'
   execute_cypher_command(constraint)
   execute_cypher_command('SHOW CONSTRAINTS')
-  
 }
+
+source(here::here("R/utilities/renviron_properties.R"))
+source(here::here("R/functions/neo4j_functions.R"))
+define_database_constraints()

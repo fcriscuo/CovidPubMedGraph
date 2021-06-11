@@ -16,13 +16,10 @@
 #'   
 #'
 #' ---------------------------
+source(here::here("R/functions/init_environment.R"))
 
-
-#' Load helper function
- source(here::here("scripts/functions/pubmed.functions.R"))
-test_pubmed_functions("18725932")
 test_all_pubmed_functions <- function(pubmed_id) {
-  doc <- fetch_pubmed_xml_doc(pubmed_id,props$save.pubmed.xml.default)
+  doc <- fetch_pubmed_xml_doc(pubmed_id,TRUE)
   print(paste("PubMed id:", pubmed_id, sep = " "))
   print(paste("DOI: ", resolve_article_doi(doc)))
   title <- resolve_pubmed_article_title(doc)
@@ -66,8 +63,11 @@ test_xml_nodes_present <- function(node_name){
   return (present)
 }
 
-fetch_test_pubmed_xml <- function() {
-  return (xmlParse(file = here::here("./tmp/30296429.xml")))
+test_fetch_pubmed_xml <- function(pubmed_id) {
+  xml_res <- entrez_fetch(db="pubmed", id=pubmed_id, rettype = "xml")
+  doc <- xmlParse(xml_res)
+  title <- resolve_pubmed_article_title(doc)
+  print(paste("title:",title, sep = " "))
 }
 
 
@@ -179,4 +179,48 @@ test_fetch_cited_by <- function(pubmed_id) {
   return (df)
 }
 
-# 
+test_update_top_articles <- function(top_articles, pm_id, cited_by_count) {
+  # identify the current article with the lowest cited by count
+  x <- tib[which.min(top_articles$count),]
+  print(x)
+  if (x$count[1] < cited_by_count) {
+    top_articles <- rows_update(top_articles, tibble(id=x$id[1],pubmed_id=pm_id,
+                                                     count= cited_by_count),
+                                by="id")
+    # print(paste("Top articles id: ", x$id[1], " pubmed id: ",
+    #             pm_id, " count: ", cited_by_count))
+  }
+  return (top_articles)
+}
+
+
+# Function to maintain a list of the top n cited PubMed entries
+# input is the number of entries to maintain
+test_top_pubmeds <- function(n=500) {
+  source(here::here("R/utilities/select_top_cited_articles.R"))
+  id <- seq(1:n)
+  pubmed_id <- rep("XXXX", times = n)
+  count <-  rep( 0, times = n)
+  top_articles <-  tibble(id, pubmed_id, count)
+  csv_file <- here::here("protected_data/metadata_sample.csv")
+  # accept default count (i.e. Inf)
+  pubmed_ids <- extract_pubmed_ids_from_csv(csv_file)
+  for (i in 1:nrow(pubmed_ids)){
+    # determine the cited by count for this paper
+    pubmed_id <-  as.character(pubmed_ids$pubmed_id[i])
+    print(paste("Processing pubmed_id: ", pubmed_id, sep=""))
+    df <-  fetch_cited_by((pubmed_id))
+    top_articles <- test_update_top_articles(top_articles, pubmed_id, nrow(df))
+    Sys.sleep(0.4)  # limit rate of requests sent to NCBI
+  }
+  out_file_path <- here::here(paste("data/top_",n,"_articles.csv", sep=""))
+  cited_by <- top_articles %>% 
+    arrange(desc(count))
+  write.csv(cited_by, out_file_path)
+}
+
+test_extract_pubmed_ids_from_csv <- function(){
+  csv_file_path <- here::here("protected_data/metadata_sample.csv")
+  pubmed_id_list <- extract_pubmed_ids_from_csv(csv_file_path)
+  pubmed_id_list
+}

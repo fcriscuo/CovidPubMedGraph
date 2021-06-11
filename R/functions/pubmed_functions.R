@@ -13,9 +13,9 @@
 #'
 #' ---------------------------
 #'
-#' Notes: This script should only be sourced after all required packages have been loaded
-#'        by the packages.R script
-#'   
+#' Notes: 
+#' 1. Functions are dependent upon the global environment established by
+#'    the init_environment.R script  
 #'
 #' ---------------------------
 
@@ -34,12 +34,6 @@ fetch_pubmed_xml_doc <- function(pubmed_id, save_xml = props$save.pubmed.xml.def
   doc <- xmlParse(xml_res)
   return(doc)
 }
-
-# Cited By ----------------------------------------------------------------
-fetch_novel_cited_by_ids <- function(pubmed_id) {
-  
-}
-# https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&tool=my_tool&email=my_email@example.com
 
 
 # PubMed Properties -------------------------------------------------------
@@ -62,12 +56,14 @@ resolve_pubmed_id <- function(doc){
 }
 
 #'Function to resolve the article's DOI 
-resolve_article_doi <- function(doc){
-  nodes <- getNodeSet(doc,"//ArticleId")
-  for (i in 1:length(nodes)) {
-    attrs <- xmlAttrs(nodes[[i]])
-    if (attrs["IdType"] == "doi") {
-      return (xmlValue(nodes[[i]]))
+resolve_article_doi <- function(doc) {
+  nodes <- getNodeSet(doc, "//ArticleId")
+  if ( length(nodes) > 0) {
+    for (i in 1:length(nodes)) {
+      attrs <- xmlAttrs(nodes[[i]])
+      if (attrs["IdType"] == "doi") {
+        return (xmlValue(nodes[[i]]))
+      }
     }
   }
   return("")
@@ -82,7 +78,6 @@ resolve_pubmed_abstract <- function(doc) {
     paste(text,.,sep=" ")
   # filter out special characters that break neo4j loads
   abstract <- str_replace_all(str, "[^[:alnum:]]", " ") %>% str_replace_all(.,"[ ]+", " ") 
-  
   return(abstract)
 }
 
@@ -116,23 +111,12 @@ resolve_pubmed_references <- function(doc) {
   if ("Citation" %in% colnames(refs)) {
     refs <- rename(refs, citation = Citation)
     refs <- refs %>% 
+      filter(!is_null(pubmed_id) && numbers_only(pubmed_id)) %>% 
     mutate(cited_by_pm = pubmed_id) %>% 
     mutate(citation_id = digest2int(citation,0L))
   }
   return(refs)
 }
-
-test_fetch_referenced_refs <- function(doc) {
-  tibble <- tibble("Citation" = character(),
-                   "ArticleIdList" = character(),
-                   "CitedBy" = character(),
-                   "citation_id" = numeric())
-  gen_number <- 0
-  refs <- resolve_pubmed_references(doc)
-  references <- fetch_referenced_refs(refs,gen_number, tibble)
-  return (references)
-}
-
 
 fetch_referenced_refs <- function(refs, gen_number, results) {
   gen_number <- gen_number +1
@@ -162,7 +146,8 @@ fetch_referenced_refs <- function(refs, gen_number, results) {
 # PubMed Article IDs ------------------------------------------------------
 
 #' Function to parse a PubMed entry's Artticle ID list
-#' The PubMed id is not included since it is already the key in the PebMed node
+#' The Article Id for the PubMed Id is not included since it is already the 
+#' key in the PubMed node
 #' Mutate the resulting data fram to incude the parent pubmed id to faciltate
 #' creating a Neo4j relationship
 #' Only the first set of Article IDs is processed to avoid picking up the
@@ -175,7 +160,7 @@ resolve_article_id_list <- function(doc) {
           )
   article_list_node <- getNodeSet(doc,"//PubmedData//ArticleIdList")
   nodes <- xmlChildren(article_list_node[[1]])  # Article IDs in the 1st ArticleIdList
-  if (length(nodes) > 0){
+  if (!is_null(nodes) && length(nodes) > 0){
     for (i in 1:length(nodes)) {
       id_type <- xmlGetAttr(nodes[[i]],"IdType")
         id <-  xmlValue(nodes[[i]])
@@ -187,8 +172,6 @@ resolve_article_id_list <- function(doc) {
   return(df)
 }
 
-
-
 # Keywords ----------------------------------------------------------------
 
 resolve_pubmed_keywords <- function(doc){
@@ -196,7 +179,7 @@ resolve_pubmed_keywords <- function(doc){
   df <- tibble("keyword" = character(),
                 "pubmed_id" = character())
   nodes <- getNodeSet(doc,"//Keyword")
-  if (length(nodes) > 0) {
+  if (!is_null(nodes) && length(nodes) > 0) {
     for ( i in 1:length(nodes)) {
       keyword_node <- xmlChildren(nodes[[i]])[[1]]
       keyword <- trimws(xmlValue(keyword_node))
@@ -214,35 +197,35 @@ resolve_pubmed_keywords <- function(doc){
 #' Mutate the data frame to include the pubmed id for the
 #' current article. This facilitates creating a Neo4j relationship
 #' between the mesh heading and the article
-resolve_mesh_headings <- function(doc){
+resolve_mesh_headings <- function(doc) {
   pubmed_id <- resolve_pubmed_id(doc)
   df <- tibble(
     descriptor_key = character(),
-                   descriptor_name = character(),
-                   qualifier_key = character(),
-                   qualifier_name = character(),
-                   pubmed_id = character()
-                   )
-  nodes <-  getNodeSet(doc,"//MeshHeading")
-  if (length(nodes) > 0 ) {
-  for (i in 1: length(nodes)){
-    # process the descriptor
-    descriptor_node <-  xmlChildren(nodes[[i]])[[1]]
-     des_name <- xmlValue(descriptor_node)
-     des_ui <- xmlGetAttr(descriptor_node, "UI")
-     # process the qualifier name if there is one
-     qual_name <- NA
-     qual_ui <- NA
-     if( xmlSize(nodes[[i]]) > 1) {
-       qualifier_node <- xmlChildren(nodes[[i]])[[2]]
-       qual_name <- xmlValue(qualifier_node)
-       qual_ui <- xmlGetAttr(qualifier_node,"UI")
-     }
-     df[nrow(df) + 1,] <- list(des_ui, des_name, qual_ui,
-                               qual_name, pubmed_id)
+    descriptor_name = character(),
+    qualifier_key = character(),
+    qualifier_name = character(),
+    pubmed_id = character()
+  )
+  nodes <-  getNodeSet(doc, "//MeshHeading")
+  if (!is_null(nodes) && length(nodes) > 0) {
+    for (i in 1:length(nodes)) {
+      # process the descriptor
+      descriptor_node <-  xmlChildren(nodes[[i]])[[1]]
+      des_name <- xmlValue(descriptor_node)
+      des_ui <- xmlGetAttr(descriptor_node, "UI")
+      # process the qualifier name if there is one
+      qual_name <- NA
+      qual_ui <- NA
+      if (xmlSize(nodes[[i]]) > 1) {
+        qualifier_node <- xmlChildren(nodes[[i]])[[2]]
+        qual_name <- xmlValue(qualifier_node)
+        qual_ui <- xmlGetAttr(qualifier_node, "UI")
+      }
+      df[nrow(df) + 1, ] <- list(des_ui, des_name, qual_ui,
+                                 qual_name, pubmed_id)
+    }
   }
-}
-   return (df)
+  return (df)
 }
 
 # PubMed Authors ----------------------------------------------------------
@@ -257,18 +240,21 @@ resolve_pubmed_authors <- function(doc) {
   pm_id <- resolve_pubmed_id(doc)
   name_tibble <- tibble(LastName = character(),
                         ForeName = character(),
-                        Initials = character()) 
+                        Initials = character())
   
-  nodes <- getNodeSet(doc,"//Author")
-  for (i in 1: length(nodes)) {
-    children <- xmlChildren(nodes[[i]])
-    LastName  <-  xmlValue(children$LastName)
-    ForeName <- xmlValue(children$ForeName)
-    Initials <-  xmlValue(children$Initals)
-    name_tibble[nrow(name_tibble) + 1,] <- list(LastName, ForeName, Initials)
-  } 
-  authors <- name_tibble %>% 
-    mutate(id = digest2int(paste(LastName, ForeName, Initials,sep=""),0L)) %>% 
+  nodes <- getNodeSet(doc, "//Author")
+  if (!is_null(nodes) && length(nodes) > 0) {
+    for (i in 1:length(nodes)) {
+      children <- xmlChildren(nodes[[i]])
+      LastName  <-  xmlValue(children$LastName)
+      ForeName <- xmlValue(children$ForeName)
+      Initials <-  xmlValue(children$Initals)
+      name_tibble[nrow(name_tibble) + 1, ] <-
+        list(LastName, ForeName, Initials)
+    }
+  }
+  authors <- name_tibble %>%
+    mutate(id = digest2int(paste(LastName, ForeName, Initials, sep = ""), 0L)) %>%
     mutate(pubmed_id = pm_id)
   
   return (authors)

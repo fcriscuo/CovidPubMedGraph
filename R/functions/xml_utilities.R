@@ -1,7 +1,7 @@
 #'
-#' Script name: utilities.R
+#' Script name: xml_utilities.R
 #'
-#' Purpose of script: General utility functions for the application
+#' Purpose of script: A collection of general functions to work with XML
 #'
 #' Author:Fred Criscuolo
 #'
@@ -88,8 +88,3 @@ write_temp_xml_file <- function(pubmed_xml, pubmed_id) {
   close(fileConn)
 }
 
-test_extract_pubmed_ids_from_csv <- function(){
-  csv_file_path <- here::here("protected_data/metadata_sample.csv")
-  pubmed_id_list <- extract_pubmed_ids_from_csv(csv_file_path)
- pubmed_id_list
-}
