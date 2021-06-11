@@ -13,9 +13,9 @@
 #'
 #' ---------------------------
 #'
-#' Notes: This script should only be sourced after all required packages have been loaded
-#'        by the packages.R script
-#'   
+#' Notes: 
+#' 1. Functions are dependent upon the global environment established by
+#'    the init_environment.R script  
 #'
 #' ---------------------------
 
@@ -49,7 +49,6 @@ resolve_pubmed_node_properties <- function(doc,pubmed_id, level) {
                  level = level))
 }
 
-
 #' Function to dynamically resolve the pubmed id from the document
 resolve_pubmed_id <- function(doc){
   id <- xmlValue(getNodeSet(doc,"//PMID")[[1]])
@@ -79,7 +78,6 @@ resolve_pubmed_abstract <- function(doc) {
     paste(text,.,sep=" ")
   # filter out special characters that break neo4j loads
   abstract <- str_replace_all(str, "[^[:alnum:]]", " ") %>% str_replace_all(.,"[ ]+", " ") 
-  
   return(abstract)
 }
 
@@ -120,18 +118,6 @@ resolve_pubmed_references <- function(doc) {
   return(refs)
 }
 
-test_fetch_referenced_refs <- function(doc) {
-  tibble <- tibble("Citation" = character(),
-                   "ArticleIdList" = character(),
-                   "CitedBy" = character(),
-                   "citation_id" = numeric())
-  gen_number <- 0
-  refs <- resolve_pubmed_references(doc)
-  references <- fetch_referenced_refs(refs,gen_number, tibble)
-  return (references)
-}
-
-
 fetch_referenced_refs <- function(refs, gen_number, results) {
   gen_number <- gen_number +1
   # for testing just select the first five references in a document
@@ -160,7 +146,8 @@ fetch_referenced_refs <- function(refs, gen_number, results) {
 # PubMed Article IDs ------------------------------------------------------
 
 #' Function to parse a PubMed entry's Artticle ID list
-#' The PubMed id is not included since it is already the key in the PebMed node
+#' The Article Id for the PubMed Id is not included since it is already the 
+#' key in the PubMed node
 #' Mutate the resulting data fram to incude the parent pubmed id to faciltate
 #' creating a Neo4j relationship
 #' Only the first set of Article IDs is processed to avoid picking up the
@@ -184,8 +171,6 @@ resolve_article_id_list <- function(doc) {
     filter(.$id_type != 'pubmed')
   return(df)
 }
-
-
 
 # Keywords ----------------------------------------------------------------
 

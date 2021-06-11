@@ -1,7 +1,7 @@
 #'
-#' Script name: utilities.R
+#' Script name: xml_utilities.R
 #'
-#' Purpose of script: General utility functions for the application
+#' Purpose of script: A collection of general functions to work with XML
 #'
 #' Author:Fred Criscuolo
 #'

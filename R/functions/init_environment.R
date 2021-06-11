@@ -1,8 +1,33 @@
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-# install.packages("BiocManager")
-# 
+#'
+#' Script name: init_environment.R
+#'
+#' Purpose of script: Establish the global environment for loading PubMed data
+#'                    into the Neo4j database
+#'
+#' Author:Fred Criscuolo
+#'
+#' Date Created: 2021-06-09
+#'
+#' Copyright (c) Fred Criscuolo, 2021
+#' Email: genomicdatasci@gmail.com
+#'
+#' ---------------------------
+#'
+#' Notes:
+#' 1. Uncomment lines that load install packages from Bioconducto and github
+#'    as required
+#' 2. The pacman package is used to manage packages from CRAN
+#' 3. For R 4.x, the neo4r package must be loaded from the 4.x branch on github
+#'   
+#' ---------------------------
+#' Uncomment following lines to use BioConductor packages
+#'if (!requireNamespace("BiocManager", quietly = TRUE))
+#'    install.packages("BiocManager")
 # packages <- c("rentrez")
 # BiocManager::install(packages, update = TRUE)
+
+#' Pacman package
+
 if (!require("pacman")) install.packages("pacman"); library(pacman)
 # grateful package
 if (!require("grateful")) install_github("Pakillo/grateful")
@@ -24,7 +49,6 @@ require(neo4r)
 cite_packages(out.format = "md", out.dir = here::here("markdown"))  
 #' set up logging
 log_appender(appender_file(here::here("./logs/covid_pubmed.log")))
-log_info("Required Bioconductor and Rstats packages loaded")
 
 #' Environment properties in .Renviron
 source(here::here("R/utilities/renviron_properties.R"))

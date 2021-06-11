@@ -1,8 +1,8 @@
 #'
 #' Script name: neo4j_functions
 #'
-#' Purpose of script: Set up Neo4j enviornment and establish connection to local
-#' Neo4j database
+#' Purpose of script: Collection of functions that interact with the Neo4j 
+#' database.
 #'
 #' Author:Fred Criscuolo
 #'
@@ -13,9 +13,10 @@
 #'
 #' ---------------------------
 #'
-#' Notes: Specify the 4.x branch of the neo4r github repository
-#'        Neo4j database user and password specified in ~/.Renviron file
-#'
+#' Notes: 
+#' 1. Functions are dependent upon the global environment established by
+#'    the init_environment.R script
+#' 
 #' ---------------------------
 #' 
 
@@ -36,7 +37,8 @@ con <- neo4j_api$new(
 #' Create new PubMed/Covid nodes for PubMed entries in a csv formatted document
 load_primary_pubmed_nodes_from_csv <- function(filename) {
   create <-  paste('LOAD CSV WITH HEADERS FROM "file:', filename,
-                   '" AS line CREATE (:PubMed:Covid {pubmed_id: line.pubmed_id, title: line.title, doi: line.doi, abstract: line.abstract});'
+                   '" AS line CREATE (:PubMed:Covid {pubmed_id: line.pubmed_id,
+                   title: line.title, doi: line.doi, abstract: line.abstract});'
                    ,sep ="") 
   execute_cypher_command(create)
   # set the level of these new nodes
@@ -155,7 +157,6 @@ load_citation_pubmed_rel <- function(citation_id, ref_pubmed_id){
    return( execute_cypher_command(query))
 }
 
-
 # CITED_BY Relationship ---------------------------------------------------
 
 #' Create a relationship between a PubMed node and another PubMed node that
@@ -218,7 +219,6 @@ load_authors <- function(authors){
     return ()
 }
 
-
 # Keyword nodes -----------------------------------------------------------
 
 #' Merge novel keywords into Neo4j nodes
@@ -237,7 +237,6 @@ load_keywords <- function(keywords, pubmed_id) {
     execute_cypher_command(merge_rel)
   }
 }
-
 
 # Article ID node ---------------------------------------------------------
 
@@ -272,14 +271,14 @@ merge_article_ids <- function(article_ids){
   return (results)
 }
 
-
 # Mesh Heading node -------------------------------------------------------
 
 #' Merge a MeshHeading node into the Neo4j database
 merge_mesh_heading <- function(mesh){
   merge <- paste("MERGE (mesh:MeshHeading {descriptor_key:'",
                  mesh$descriptor_key, "', descriptor_name:'",
-                 mesh$descriptor_name,"' }) return mesh.descriptor_key", sep = "")
+                 mesh$descriptor_name,"' }) return mesh.descriptor_key", 
+                 sep = "")
   res <- execute_cypher_command(merge)
   return (as.character(mesh$descriptor_key))
 }
@@ -294,8 +293,10 @@ load_mesh_headings <- function(mesh_headings){
   for (i in 1:length(mesh_headings)){
     pubmed_id = mesh_headings$pubmed_id[i]
     mesh_key <-  merge_mesh_heading(mesh_headings[i,])
-    match <- paste("MATCH (p:PubMed), (m:MeshHeading) WHERE p.pubmed_id = '", pubmed_id,"' AND m.descriptor_key = '",
-                   mesh_key, "' MERGE (p) - [r:HAS_MESH_HEADING] -> (m) RETURN r", sep ="")
+    match <- paste("MATCH (p:PubMed), (m:MeshHeading) WHERE p.pubmed_id = '",
+                   pubmed_id,"' AND m.descriptor_key = '",
+                   mesh_key, 
+                   "' MERGE (p) - [r:HAS_MESH_HEADING] -> (m) RETURN r", sep ="")
     execute_cypher_command(match)
     result[i] <- mesh_key
     
@@ -303,16 +304,11 @@ load_mesh_headings <- function(mesh_headings){
   return (result)
 }
 
-#' Article Journal and Journal Issue nodes
-#' The Journal and Issue are separated to facilitate identifying the journals
-#' that contain the most papers
-
-
 # Journal node functions --------------------------------------------------
 
 #' Load journal information for this paper
 #' Create a new JournalIssue node and a relationship to the parent PubMed node
-#' Merge a new/existing JournalIssue node and create a realtionship to the 
+#' Merge a new/existing Journal node and create a realtionship to the 
 #' appropriate JournalIssue node 
 #' PubMed --> JOURNAL_ISSUE --> JOURNAL
 #' 
@@ -333,14 +329,18 @@ load_journal_data <-function(journal) {
   #print(merge)
    execute_cypher_command(merge)
   # create a HAS_JOURNAL relationship between JournalIssue & Journal nodes
-   relationship_1 <- paste("MATCH (issue:JournalIssue), (journal:Journal) WHERE issue.issue_key ='",
-                         journal$issue_key, "' AND journal.journal_issn = '", journal$journal_issn,
+   relationship_1 <- paste("MATCH (issue:JournalIssue), 
+                           (journal:Journal) WHERE issue.issue_key ='",
+                         journal$issue_key, "' AND journal.journal_issn = '", 
+                         journal$journal_issn,
                          "' MERGE (issue) -[r:HAS_JOURNAL] -> (journal) return r"
                          ,sep = "")
    #print(relationship_1)
    execute_cypher_command(relationship_1)
    # create a HAS_JOURNAL_ISSUE between the PubMed node and the JournalIssue node
-   relationship_2 <- paste("MATCH (p:PubMed), (issue:JournalIssue) WHERE p.pubmed_id = '", journal$pubmed_id,
+   relationship_2 <- paste("MATCH (p:PubMed), 
+                           (issue:JournalIssue) WHERE p.pubmed_id = '", 
+                           journal$pubmed_id,
                           "' AND issue.issue_key = '",journal$issue_key,
                           "' MERGE (p) - [r:HAS_JOURNAL_ISSUE] -> (issue) return r"
                           ,sep = "")
@@ -348,10 +348,9 @@ load_journal_data <-function(journal) {
    execute_cypher_command(relationship_2)
 }
 
-
 # PubMed node -------------------------------------------------------------
 
-#' Function to MERGE or CREATE a PubMed nodes
+#' Function to MERGE or CREATE a PubMed node
 #' PubMed nodes at level 1 also have a Covid label
 load_pubmed_node <- function(pubmed_properties){
   level <- pubmed_properties$level[1]

@@ -1,5 +1,5 @@
 
-#' Environment properties in .Renviron
+#' Environment properties in .Renviron file
 neo4j_user  <-  Sys.getenv("NEO4J_USER")
 neo4j_password <- Sys.getenv("NEO4J_PASSWORD")
 ncbi_email <- Sys.getenv("NCBI_EMAIL")
