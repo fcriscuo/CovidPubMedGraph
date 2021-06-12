@@ -189,7 +189,7 @@ merge_pubmed_reference_relationship <- function(pubmed_id, ref_pubmed_id){
     execute_cypher_command(merge)
     return(TRUE)
   } else {
-    log_warn(paste("function: merge_pubmed_reference_realtion: ",
+    log_warn(paste("function: merge_pubmed_reference_relation: ",
                    " reference pubmed node ", ref_pubmed_id),
              "does not exist", sep ="")
     return(FALSE)
