@@ -100,6 +100,14 @@ pubmed_node_exists <- function(pubmed_id) {
   res <-  execute_cypher_command(query)
   exists <- res$PREDICATE[[1]]
   return (as.logical(exists))
+
+}
+
+#' Function to find the maximum PubMed level in the database
+resolve_max_pubmed_level <-  function() {
+  query <- "MATCH (p:PubMed) RETURN p.level ORDER BY p.level DESC LIMIT 1"
+  res <- execute_cypher_command(query)
+  return(as.integer(res$p.level[[1]]))
 }
 
 # Citations ---------------------------------------------------------------
@@ -156,6 +164,38 @@ load_citation_pubmed_rel <- function(citation_id, ref_pubmed_id){
   query <- str_replace(query,"PUBMED_ID", ref_pubmed_id)
    return( execute_cypher_command(query))
 }
+
+#' Function to delete a Citation node
+delete_citationby_id <- function(id) {
+  delete <- paste("MATCH (c:Citation{id:",id,
+                  "}) DETACH DELETE(c)")
+  return (execute_cypher_command(delete))
+}
+
+
+# PubMed References -------------------------------------------------------
+#' create a relationship between a PubMed article node and a PubMed node that
+#' it references
+merge_pubmed_reference_relationship <- function(pubmed_id, ref_pubmed_id){
+  if(pubmed_node_exists(ref_pubmed_id)) {
+    merge <- paste("MATCH (p:PubMed{pubmed_id:'PUBMED_ID'}), ",
+                   "(rp:PubMed{pubmed_id:'REF_PUBMED_ID'}) ",
+                   " MERGE (p) -[r:HAS_REFERENCE] -> (rp) ",
+                  " ON CREATE SET r.alreadyExisted=FALSE  ",
+                " ON MATCH SET r.alreadyExisted=TRUE  ",
+                " RETURN r.alreadyExisted;", sep ="")
+    merge  <- str_replace(merge,"PUBMED_ID", pubmed_id)
+    merge  <- str_replace(merge,"REF_PUBMED_ID", ref_pubmed_id)
+    execute_cypher_command(merge)
+    return(TRUE)
+  } else {
+    log_warn(paste("function: merge_pubmed_reference_realtion: ",
+                   " reference pubmed node ", ref_pubmed_id),
+             "does not exist", sep ="")
+    return(FALSE)
+  }
+}
+
 
 # CITED_BY Relationship ---------------------------------------------------
 
