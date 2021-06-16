@@ -138,12 +138,19 @@ load_reference_citations <- function(refs) {
 }
 
 #' Function to find all the Citation nodes for a specified PubMed Id
-#' Filter for Citations with valid PubMed Ids
+#' Include the source pubmed id with each citation to faciltate 
+#' creating relationships in the neo4j database
 find_citations_by_pubmed_id <- function(pubmed_id) {
-  query <-"MATCH (p:PubMed{pubmed_id:'PUBMED_ID'})-[:HAS_CITATION]->(c) RETURN p,c"
-  query <- str_replace(query,"PUBMED_ID",pubmed_id)
+  query <-
+    "MATCH (p:PubMed{pubmed_id:'PUBMED_ID'})-[:HAS_CITATION]->(c) RETURN p,c"
+  query <- str_replace(query, "PUBMED_ID", pubmed_id)
   res <- execute_cypher_command(query)
-  return(res$c)
+  if (!is_empty(res)) {
+    cit <- res$c %>%
+      mutate(pubmed_id = pubmed_id)
+    return(cit)
+  }
+  return (res)
 }
 
 #' Create a Relationship between the Citation node and the referenced PubMed node
@@ -205,19 +212,37 @@ merge_pubmed_reference_relationship <- function(pubmed_id, ref_pubmed_id){
 #' 
  
 load_cited_by_pubmed_rel <- function(pubmed_id, cited_by_id) {
-  relationship <- paste("MATCH (p:PubMed), (c:PubMed) WHERE p.pubmed_id = 'PUBMED_ID' ",
-                 " AND c.pubmed_id = 'CITED_BY_ID' ",
-                 " MERGE (p) -[r:CITED_BY] -> (c) RETURN r", sep ="")
+  relationship <-
+    paste(
+      "MATCH (p:PubMed), (c:PubMed) WHERE p.pubmed_id = 'PUBMED_ID' ",
+      " AND c.pubmed_id = 'CITED_BY_ID' ",
+      " MERGE (p) -[r:CITED_BY] -> (c) ",
+      " ON CREATE SET r.alreadyExisted=FALSE  ",
+      " ON MATCH SET r.alreadyExisted=TRUE  ",
+      " RETURN r.alreadyExisted;",
+      sep = ""
+    )
   relationship <- str_replace(relationship, "PUBMED_ID", pubmed_id)
-  relationship <- str_replace(relationship, "CITED_BY_ID", cited_by_id)
-  log_info(relationship)
-  execute_cypher_command(relationship)
-# increment cited_by_count property
-update <-  paste("MATCH (p:PubMed {pubmed_id:'PUBMED_ID'}) ",
-                 " SET p.cited_by_count = p.cited_by_count +1 ",
-                 " RETURN p.cited_by_count", sep ="")
-update <-  str_replace(update,"PUBMED_ID", pubmed_id)
-return(execute_cypher_command(update))
+  relationship <-
+    str_replace(relationship, "CITED_BY_ID", cited_by_id)
+  existed <-  execute_cypher_command(relationship)
+  # increment cited_by_count property if this is a new relationship
+  if (!existed) {
+    log_info(relationship)
+    update <-  paste(
+      "MATCH (p:PubMed {pubmed_id:'PUBMED_ID'}) ",
+      " SET p.cited_by_count = p.cited_by_count +1 ",
+      " RETURN p.cited_by_count",
+      sep = ""
+    )
+    update <-  str_replace(update, "PUBMED_ID", pubmed_id)
+    return(execute_cypher_command(update))
+  }
+  query <-  paste("MATCH (p:PubMed {pubmed_id:'PUBMED_ID'}) ",
+                  " RETURN p.cited_by_count",
+                  sep = "")
+  query <-  str_replace(update, "PUBMED_ID", pubmed_id)
+  return (execute_cypher_command(query))
 }
 
 #' Reset cited_by_count in specified PubMed node to 0

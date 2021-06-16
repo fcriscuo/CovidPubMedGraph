@@ -50,34 +50,55 @@ refactor_pubmed_references <- function() {
       citation_list <- find_citations_by_pubmed_id(pubmed_id)
       if (!is.null(citation_list) && nrow(citation_list) > 0) {
         for (k in 1:nrow(citation_list)) {
-          ref_pubmed_id <-  citation_list$ref_pubmed_id[k]
-          if (!is_null(ref_pubmed_id) &&
-              numbers_only(ref_pubmed_id)) {
-            if (!pubmed_node_exists(ref_pubmed_id)) {
-              # load any missing PubMed entries for referenced articles
-              load_pubmed_entry(ref_pubmed_id, i)
-            }
-            if (merge_pubmed_reference_relationship (pubmed_id, ref_pubmed_id)) {
-              #delete the now bypassed Citation node if a PubMed -> PubMed relationship can be established
-              delete_citationby_id(citation_list$id[k])
-              
-              log_info(
-                paste(
-                  "Established reference relationship: ",
-                  pubmed_id,
-                  " -> ",
-                  ref_pubmed_id,
-                  " and deleted Citation: ",
-                  citation_list$citation[k]
-                )
-              )
-              rel_count <- rel_count + 1
-            }
-          }  # end of valid ref_pubmed_id processing
+          resolve_referenced_article(citation_list[k])
+          # ref_pubmed_id <-  citation_list$ref_pubmed_id[k]
+          # if (!is_null(ref_pubmed_id) &&
+          #     numbers_only(ref_pubmed_id)) {
+          #   if (!pubmed_node_exists(ref_pubmed_id)) {
+          #     # load any missing PubMed entries for referenced articles
+          #     load_pubmed_entry(ref_pubmed_id, i)
+          #   }
+          #   if (merge_pubmed_reference_relationship (pubmed_id, ref_pubmed_id)) {
+          #     #delete the now bypassed Citation node if a PubMed -> PubMed relationship can be established
+          #     delete_citationby_id(citation_list$id[k])
+          #     
+          #     log_info(
+          #       paste(
+          #         "Established reference relationship: ",
+          #         pubmed_id,
+          #         " -> ",
+          #         ref_pubmed_id,
+          #         " and deleted Citation: ",
+          #         citation_list$citation[k]
+          #       )
+          #     )
+          #     rel_count <- rel_count + 1
+          #   }
+          # }  # end of valid ref_pubmed_id processing
         }  # end of citation loop
       } # end of citation processing
     }  # end of pubmed_id processing
     log_info(paste("Created ", rel_count, " HAS_REFERENCE relationships"))
   }
-  
 }
+
+resolve_referenced_article <- function(citation){
+  ref_pubmed_id <-  citation$ref_pubmed_id
+  pubmed_id <- citation$pubmed_id
+  if (!is.null(ref_pubmed_id) && numbers_only(ref_pubmed_id)) {
+    if(!pubmed_node_exists(ref_pubmed_id)) {
+      load_pubmed_entry(ref_pubmed_id)
+    }
+    if (merge_pubmed_reference_relationship (pubmed_id, ref_pubmed_id)) {
+      delete_citationby_id(citation$id)
+      log_info(paste( "Established reference relationship: ",
+                      pubmed_id,
+                      " -> ",
+                      ref_pubmed_id,
+                      " and deleted Citation: ",
+                      citation_list$citation,sep=""))
+    }
+  }
+}
+
+

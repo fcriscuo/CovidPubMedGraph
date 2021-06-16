@@ -74,7 +74,8 @@ for (i in 2:max_ref_level) {
         ref_pubmed_id <- citations$ref_pubmed_id[k]
         cit_id <- citations$id[k]
         load_pubmed_entry(ref_pubmed_id, i)
-        # create a relationship between source pubmed id and referenced pubmed id
+        # create a relationship between source pubmed id and a 
+        # referenced pubmed id using a Citation node
         load_citation_pubmed_rel(cit_id, ref_pubmed_id)
         Sys.sleep(0.3)  # limit rate of requests sent to NCBI
       }
@@ -82,9 +83,18 @@ for (i in 2:max_ref_level) {
   }
 }
 
+# Refactor Reference Nodes ------------------------------------------------
+#
+# Refactor the database schema to establish direct relationships between PubMed nodes
+# representing original articles and PubMed nodes that represent referenced articles 
+# at a different level. Remove intermediate Citation nodes where a PubMed node for
+# a reference article can be created
+sourve(here::here("R/utilities/RefactorReferenceNodes.R"))
+refactor_pubmed_references()
+
 # Cited-by PubMed Nodes ---------------------------------------------------
 
-#' For all the Pubmed nodes in the database, find the PubMed entries that cite these articles
+#' For all the Pubmed nodes in the database, find the PubMed entries that cite those articles
 #' If these new PubMed entries are novel, create a PubMed node for them.
 #' For all cited-by entries, create a realtionship between the cited PubMed node and the cited-by node
 log_info("Loading cited-by articles")
