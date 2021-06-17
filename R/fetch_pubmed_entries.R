@@ -74,29 +74,37 @@ fetch_cited_by_pubmed_ids <- function(pubmed_id){
 
 #' Function to associate a PubMed article with PubMed articles that cite it
 #' If nodes for citing PubMed articles do not exists in the database,
-#' basic PubMed nodes with childern are created.
+#' basic PubMed nodes without childern are created.
 #' A CITED_BY relationship between the origin PubMed node and the citing 
 #' PubMed node is created
 #' The cited_by_count property in the origin PubMed node is incremented
-load_cited_by_articles <- function(count =.Machine$integer.max) {
+load_cited_by_articles <- function(count = .Machine$integer.max) {
   all_pubmed_ids <-  find_all_pubmed_ids(count)
   log_info(paste("Found ", nrow(all_pubmed_ids), " PubMed nodes in the database"))
-  for (i in 1: nrow(all_pubmed_ids)) {
+  for (i in 1:nrow(all_pubmed_ids)) {
     pubmed_id <- all_pubmed_ids$value[i]
-    clear_cited_by_count(pubmed_id)  # clear any existing count for this node
-    cited_by_ids <- fetch_cited_by_pubmed_ids(all_pubmed_ids$value[i])
-    for (j in 1:nrow(cited_by_ids)) {
-      cited_by_id <- cited_by_ids$cite_id[j]
-      # is this PubMed id already in the database
-      if(!any(all_pubmed_ids$value == cited_by_id)) {
-        doc <-  fetch_pubmed_xml_doc(cited_by_id,FALSE)
-         load_pubmed_node(resolve_pubmed_node_properties(doc,cited_by_id, 0))
+    if (get_cited_by_count(pubmed_id) == 0) {
+      cited_by_ids <- fetch_cited_by_pubmed_ids(all_pubmed_ids$value[i])
+      set_cited_by_count(pubmed_id, nrow(cited_by_ids))
+      log_info(paste(
+        "CITED_BY_COUNT property for PubMed node: ",
+        pubmed_id,
+        " = ",
+        nrow(cited_by_ids),
+        sep = ""
+      ))
+      for (j in 1:nrow(cited_by_ids)) {
+        cited_by_id <- cited_by_ids$cite_id[j]
+        # is this PubMed id already in the database?
+        if (!any(all_pubmed_ids$value == cited_by_id)) {
+          doc <-  fetch_pubmed_xml_doc(cited_by_id, FALSE)
+          load_pubmed_node(resolve_pubmed_node_properties(doc, cited_by_id, 0))
+        }
+        # Create a CITED_BY relationship between original PubMed node and the
+        # PubMed node that cited it
+        load_cited_by_pubmed_rel(pubmed_id, cited_by_id)
+        
       }
-      # Create a CITED_BY relationship between original PubMed node and the
-      # PubMed node that cited it
-      count <- load_cited_by_pubmed_rel(pubmed_id, cited_by_id)
-      log_info(paste("CITED_BY_COUNT property for PubMed node: ",
-                     pubmed_id, " = ", count, sep =""))
     }
   }
 }
@@ -160,3 +168,4 @@ load_pubmed_entry <- function(pubmed_id, level) {
   }
   return()
 }
+

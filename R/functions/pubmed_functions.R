@@ -260,7 +260,6 @@ resolve_pubmed_authors <- function(doc) {
   return (authors)
 }
 
-
 # PubMed Journal ----------------------------------------------------------
 
 #' Function to return attributes for the article's journal
