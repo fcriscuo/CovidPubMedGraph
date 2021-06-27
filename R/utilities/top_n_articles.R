@@ -46,7 +46,7 @@
 if (!require("pacman")) install.packages("pacman"); library(pacman)
 pacman::p_load("tidyverse", "data.table",  "httr","XML","curl",
                "digest","properties","magrittr", "readr",
-               "logger", "rentrez")
+               "logger", "rentrez","fs")
 
 source(here::here("R/utilities/renviron_properties.R"))
 
@@ -74,6 +74,24 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf, skip_row
   return (pubmed_id_list)
 }
 
+#' Function that will read the specified release of the Covid-19 metadata.csv 
+#' file. If necessary the function will create a release-specific subdirectory
+#' for this file.
+fetch_covid19_metadata <- function(release = "2021-06-14") {
+  metadata_file <- here::here(paste("protected_data/",release,"/metadata.csv",sep=""))
+  if (file_exists(metadata_file)) {
+    log_info(paste(metadata_file, " already exists", sep=""))
+    return(metadata_file)
+  }
+  base_url <- "https://ai2-semanticscholar-cord-19.s3-us-west-2.amazonaws.com/RELEASE/metadata.csv"
+  dest_dir <- here::here(paste("protected_data",release, sep="/"))
+  dir_create(dest_dir)
+  url <- stringr::str_replace(base_url,"RELEASE", release)
+  download.file(url,metadata_file ,"curl")
+  log_info(paste("COVID-19 metadata loaded to : ", url.sep=""))
+  return (paste(dest_dir,"metadata.csv",sep="/"))
+}
+
 #'Function that submits an eutils query to NCBI requesting the PubMed Ids for
 #'articles that cite the specified PubMed Id. The hypothesis is that the 
 #'importance of an article is proportional to how often it has been used as
@@ -84,8 +102,7 @@ fetch_cited_by_pubmed_ids <- function(pubmed_id) {
   base_url <- paste(
     "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&linkname=pubmed_pubmed_citedin&id=PUBMED_ID&&tool=my_tool&email=",ncbi_email,"&api_key=",ncbi_api_key,sep = "")
   df <- tibble(cite_id = character())
-  url <-
-    stringr::str_replace(base_url, 'PUBMED_ID', as.character(pubmed_id))
+  url <-stringr::str_replace(base_url, 'PUBMED_ID', as.character(pubmed_id))
   UA <-
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"
    tryCatch({

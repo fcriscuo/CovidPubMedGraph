@@ -30,20 +30,19 @@
 source(here::here("R/functions/init_environment.R"))
 source(here::here("R/fetch_pubmed_entries.R"))
 
-default_csv_file_path <- here::here("./data/top_cited_articles.csv")
+csv_file_path <- here::here(props$covid.csv.file)
 default_row_count <- as.integer(props$pubmed.max.count)
-max_ref_level <- props$reference.levels.default
-
-print("WARNING: This script will delete all nodes and relationships in the Neo4j database")
-print("Execution will now pause for 15 seconds")
-print("Please cancel execution now if you wish to avoid clearing the database.")
-Sys.sleep(15.0)
-print("Execution of this script will now proceed")
+max_ref_level <- as.integer(props$reference.levels.default)
+clear_database <- as.logical(props$load.database.mode == "CREATE")
+ncbi_batch_size <- as.integer(props$batch.request.size)
+primary_node_label <- props$primary.node.label
 
 #' Clear the existing database
-clear_neo4j_database()
+if(clear_database) {
+  clear_neo4j_database()
+}
 
-pubmed_id_list <- extract_pubmed_ids_from_csv(default_csv_file_path, default_row_count)
+pubmed_id_list <- extract_pubmed_ids_from_csv(csv_file_path, default_row_count)
 
 # Reference Level 1 -------------------------------------------------------
 
@@ -89,7 +88,7 @@ for (i in 2:max_ref_level) {
 # representing original articles and PubMed nodes that represent referenced articles 
 # at a different level. Remove intermediate Citation nodes where a PubMed node for
 # a reference article can be created
-sourve(here::here("R/utilities/RefactorReferenceNodes.R"))
+source(here::here("R/utilities/RefactorReferenceNodes.R"))
 refactor_pubmed_references()
 
 # Cited-by PubMed Nodes ---------------------------------------------------

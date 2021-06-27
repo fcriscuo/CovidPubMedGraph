@@ -32,6 +32,18 @@ extract_pubmed_ids_from_csv <- function(csv_file_path, row_count = Inf) {
   return (pubmed_id_list)
 }
 
+extract_ids_counts_from_csv <- function(csv_file_path, row_count = Inf) {
+  # Accept function defaults
+  # Include col_names = TRUE (default) to document header requirement
+  pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, guess_max = 4,
+                             col_types = list(
+                               "pubmed_id" = col_character(),
+                               "cite_count" = col_integer()),
+                             n_max = row_count) %>% 
+    select(pubmed_id,cite_count) 
+  print(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
+  return (pubmed_id_list)
+}
 
 # Cited-By functions ------------------------------------------------------
 

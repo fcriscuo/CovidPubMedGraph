@@ -39,16 +39,22 @@ pacman::p_load("tidyverse", "data.table", "rentrez","XML",
 #' Read the properties file
 propfile <-  here::here("resources/app_default.properties")
 props <- read.properties(propfile, fields = c("save.pubmed.xml.default",
+                                              "load.database.mode",
                                               "reference.levels.default",
                                               "pubmedid.column.name",
-                                              "pubmed.max.count"))
+                                              "pubmed.max.count",
+                                              "top.cited.log.file",
+                                              "neo4j.load.log.file",
+                                              "covid.csv.file",
+                                              "batch.request.size"
+                                              "primary.node.label"))
 #' load the 4.x branch of the neo4r package from github
  #remotes::install_github("davidlrosenblum/neo4r",ref="4.x")
 require(neo4r)
 # Generate markdown with citations and references
 cite_packages(out.format = "md", out.dir = here::here("markdown"))  
-#' set up logging
-log_appender(appender_file(here::here("./logs/covid_pubmed.log")))
+#' set up logging for database load
+log_appender(appender_file(here::here(props$neo4j.load.lofg.file)))
 
 #' Environment properties in .Renviron
 source(here::here("R/utilities/renviron_properties.R"))

@@ -47,7 +47,14 @@ load_primary_pubmed_nodes_from_csv <- function(filename) {
 }
 
 #' clear Neo4j database
+#' This function will issue a warning to the console and allow the user 15 sec
+#' to kill the process
 clear_neo4j_database <- function() {
+  print("WARNING: This script will delete all nodes and relationships in the Neo4j database")
+  print("Execution will now pause for 15 seconds")
+  print("Please cancel execution now if you wish to avoid clearing the database.")
+  Sys.sleep(15.0)
+  print("Execution of this script will now proceed")
   delete <- "MATCH (n) DETACH DELETE (n)"
   execute_cypher_command(delete)
   log_info("Existing NEO4J database cleared")
