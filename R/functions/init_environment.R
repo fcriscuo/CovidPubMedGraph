@@ -46,13 +46,13 @@ props <- read.properties(propfile, fields = c("save.pubmed.xml.default",
                                               "top.cited.log.file",
                                               "neo4j.load.log.file",
                                               "covid.csv.file",
-                                              "batch.request.size"
+                                              "batch.request.size",
                                               "primary.node.label"))
 #' load the 4.x branch of the neo4r package from github
  #remotes::install_github("davidlrosenblum/neo4r",ref="4.x")
 require(neo4r)
 # Generate markdown with citations and references
-cite_packages(out.format = "md", out.dir = here::here("markdown"))  
+#cite_packages(out.format = "md", out.dir = here::here("markdown"))  
 #' set up logging for database load
 log_appender(appender_file(here::here(props$neo4j.load.lofg.file)))
 
@@ -63,6 +63,6 @@ source(here::here("R/functions/pubmed_functions.R"))
 source(here::here("R/functions/neo4j_functions.R"))
 source(here::here("R/fetch_pubmed_entries.R"))
 
-log_info ("Application environment initialized......")
+#log_info ("Application environment initialized......")
 
 numbers_only <- function(x) !grepl("\\D", x)

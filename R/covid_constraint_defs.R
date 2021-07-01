@@ -34,6 +34,31 @@ define_database_constraints <- function() {
   execute_cypher_command(constraint)
   constraint <- 'create constraint unique_keyword if not exists on (k:Keyword) assert k.keyword is unique'
   execute_cypher_command(constraint)
+  #HGNC 
+  constraint <- 'create constraint unique_hgnc_id if not exists on (h:HGNC) assert h.hgnc_id is unique'
+  execute_cypher_command(constraint)
+  #GeneFamily
+  constraint <- 'create constraint unique_gene_fmaily_id if not exists on (gf:GeneFamily) assert gf.gene_family_id is unique'
+  execute_cypher_command(constraint)
+  #Entrez
+  constraint <- 'create constraint unique_entrez_id if not exists on (e:Entrez) assert e.entrez_id is unique'
+  execute_cypher_command(constraint)
+  #Ensembl
+  constraint <- 'create constraint unique_ensembl_id if not exists on (e:Ensembl) assert e.ensembl_id is unique'
+  execute_cypher_command(constraint)
+  #RefSeq
+  constraint <- 'create constraint unique_refseq_id if not exists on (r:RefSeq) assert r.refseq_accession is unique'
+  execute_cypher_command(constraint)
+  #Uniprot
+  constraint <- 'create constraint unique_uniprot_id if not exists on (u:Uniprot) assert u.uniprot_id is unique'
+  execute_cypher_command(constraint)
+  #Cosmic
+  constraint <- 'create constraint unique_cosmic_id if not exists on (c:Cosmic) assert c.cosmic_id is unique'
+  execute_cypher_command(constraint)
+  #OMIM
+  constraint <- 'create constraint unique_omim_id if not exists on (o:OMIM) assert o.omim_id is unique'
+  execute_cypher_command(constraint)
+  
   execute_cypher_command('SHOW CONSTRAINTS')
 }
 

@@ -28,7 +28,7 @@
 #'    install.packages("BiocManager")
 #'' Pacman package
 if (!require("pacman")) install.packages("pacman"); library(pacman)
-p_load("fs")
+p_load("fs","tidyverse")
 
 batch_file_path <- here::here("./data/batch_pubmed_queries.txt")
 
@@ -43,7 +43,7 @@ generate_pubmed_batches_from_file <- function(csv_file_path, batch_size = 20) {
   }
 }
 
-formate_pubmed_queries <- function(csv_file_path, batch_size){
+format_pubmed_queries <- function(csv_file_path, batch_size){
   max_offset <- batch_size -1
   query_list <- tibble(pm_id_query = character())
   pubmed_id_list <-  extract_cited_by_ids(csv_file_path) 
@@ -68,3 +68,26 @@ formate_pubmed_queries <- function(csv_file_path, batch_size){
   }
   return (query_list)
 }
+
+extract_cited_by_ids <- function(csv_file_path, row_count = Inf) {
+  # Accept function defaults
+  # Include col_names = TRUE (default) to document header requirement
+  pubmed_id_list <- read_csv(csv_file_path,col_names = TRUE, guess_max = 4,
+                             col_types = list(
+                               "id" = col_integer(),
+                               "pubmed_id" = col_character(),
+                               "cite_count" = col_integer(),
+                               "seq_num" = col_integer()
+                             )) %>% 
+    select(pubmed_id)
+  print(paste("Read ", nrow(pubmed_id_list), " from csv file: ", csv_file_path, sep =""))
+  return (pubmed_id_list)
+}
+
+test_pubmed_batches <- function(){
+  out_file_path <- here::here("data/top_cited_articles.csv")
+  generate_pubmed_batches_from_file(out_file_path, 50)
+  
+}
+
+

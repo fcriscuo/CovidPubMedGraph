@@ -7,6 +7,7 @@
 -   magrittr (Bache and Wickham 2020)
 -   neo4r (Fay 2021)
 -   pacman (Rinker and Kurkiewicz 2018)
+-   readr (Wickham and Hester 2020)
 -   stringr (Wickham 2019)
 -   tidyverse (Wickham et al. 2019)
 -   XML (Temple Lang 2021)
@@ -55,3 +56,6 @@ Source Software* 4 (43): 1686. <https://doi.org/10.21105/joss.01686>.
 Wickham, Hadley, Romain François, Lionel Henry, and Kirill Müller. 2021.
 *Dplyr: A Grammar of Data Manipulation*.
 <https://CRAN.R-project.org/package=dplyr>.
+
+Wickham, Hadley, and Jim Hester. 2020. *Readr: Read Rectangular Text
+Data*. <https://CRAN.R-project.org/package=readr>.
